@@ -24,9 +24,6 @@ public class Recto {
             this.r2 = r2;
             this.c2 = c2;
         }
-
-        int height() { return r2 - r1 + 1; }
-        int width() { return c2 - c1 + 1; }
     }
 
     private final int rows;
@@ -35,7 +32,6 @@ public class Recto {
     private final List<Clue> clues = new ArrayList<>();
     private final List<List<Rect>> candidateRects = new ArrayList<>();
     private final int[][] cellOwner;
-    private final Rect[] assignment;
 
     public Recto(int[][] grid) {
         this.rows = grid.length;
@@ -54,19 +50,16 @@ public class Recto {
                 }
             }
         }
-        this.assignment = new Rect[clues.size()];
         generateCandidates();
     }
 
     private void generateCandidates() {
         for (Clue clue : clues) {
             List<Rect> valid = new ArrayList<>();
-            // Each clue sum = h + w
             for (int h = 1; h < clue.sum; h++) {
                 int w = clue.sum - h;
                 if (h > rows || w > cols) continue;
 
-                // Test all placements of h x w bounding boxes covering (clue.r, clue.c)
                 int minR = Math.max(0, clue.r - h + 1);
                 int maxR = Math.min(rows - h, clue.r);
                 int minC = Math.max(0, clue.c - w + 1);
@@ -97,7 +90,6 @@ public class Recto {
     }
 
     public boolean solve() {
-        // Sort clues by fewest candidates first (MRV heuristic)
         Integer[] order = new Integer[clues.size()];
         for (int i = 0; i < clues.size(); i++) order[i] = i;
         Arrays.sort(order, Comparator.comparingInt(i -> candidateRects.get(i).size()));
@@ -107,7 +99,6 @@ public class Recto {
 
     private boolean backtrack(int index, Integer[] order) {
         if (index == clues.size()) {
-            // Verify full grid coverage
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     if (cellOwner[r][c] == -1) return false;
@@ -120,12 +111,10 @@ public class Recto {
         for (Rect rect : candidateRects.get(clueIdx)) {
             if (canPlace(rect)) {
                 place(rect, clueIdx);
-                assignment[clueIdx] = rect;
 
                 if (backtrack(index + 1, order)) return true;
 
                 unplace(rect);
-                assignment[clueIdx] = null;
             }
         }
         return false;
@@ -157,7 +146,6 @@ public class Recto {
     }
 
     public void printSolution() {
-        // Horizontal borders
         for (int r = 0; r <= rows; r++) {
             StringBuilder sb = new StringBuilder();
             for (int c = 0; c < cols; c++) {
@@ -168,14 +156,12 @@ public class Recto {
             sb.append("+");
             System.out.println(sb);
 
-            // Cell interiors and vertical borders
             if (r < rows) {
                 StringBuilder rowStr = new StringBuilder();
                 for (int c = 0; c < cols; c++) {
                     boolean vBorder = (c == 0 || cellOwner[r][c - 1] != cellOwner[r][c]);
                     rowStr.append(vBorder ? "|" : " ");
                     
-                    // Maintain exact original position
                     if (grid[r][c] > 0) {
                         rowStr.append(String.format(" %d ", grid[r][c]));
                     } else {
@@ -189,7 +175,6 @@ public class Recto {
     }
 
     public static void main(String[] args) {
-        // 0 indicates an empty cell
         int[][] puzzle = {
             {4, 6, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 3, 5, 0, 0},
