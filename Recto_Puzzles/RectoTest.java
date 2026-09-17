@@ -59,13 +59,40 @@ public class RectoTest {
             {0, 0, 0, 0, 0, 5, 4, 0},
             {0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 7, 6, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 6, 7, 0}
+            {0, 0, 0, 0, 0, 0, 6, 7}
         }, true);
 
-        runTestCase("Unsolvable Contradiction Grid", new int[][]{
+        runTestCase("Unsolvable Contradiction Grid (2x2)", new int[][]{
             {2, 0},
             {0, 2}
         }, false);
+
+        // Intentionally unsolvable 8x8:
+        // Four 4x4 quadrants would require sums of 4+4=8, but clues of 7 only provide
+        // candidates (h+w=7) that have a maximum area of 12 (3x4), leaving the remaining 16 cells untiled.
+        runTestCase("Intentionally Unsolvable (8x8)", new int[][]{
+            {7, 0, 0, 0, 0, 0, 0, 7},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {7, 0, 0, 0, 0, 0, 0, 7}
+        }, false);
+
+        // Solvable 8x8:
+        // Clean symmetrical tiling into four 4x4 quadrants (h=4, w=4 -> sum=8).
+        runTestCase("Solvable Quadrants (8x8)", new int[][]{
+            {8, 0, 0, 0, 0, 0, 0, 8},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {8, 0, 0, 0, 0, 0, 0, 8}
+        }, true);
 
         System.out.println("=========================================");
         System.out.println("TEST RESULTS SUMMARY");

@@ -16,9 +16,11 @@ public class Recto {
     }
 
     static class Rect {
+        int clueId;
         int r1, c1, r2, c2;
 
-        Rect(int r1, int c1, int r2, int c2) {
+        Rect(int clueId, int r1, int c1, int r2, int c2) {
+            this.clueId = clueId;
             this.r1 = r1;
             this.c1 = c1;
             this.r2 = r2;
@@ -30,9 +32,12 @@ public class Recto {
     private final int cols;
     private final int[][] grid;
     private final List<Clue> clues = new ArrayList<>();
-    private final List<List<Rect>> candidateRects = new ArrayList<>();
+    private final List<Rect> allCandidateRects = new ArrayList<>();
+    private final List<Rect>[][] cellCandidates;
     private final int[][] cellOwner;
+    private final boolean[] cluePlaced;
 
+    @SuppressWarnings("unchecked")
     public Recto(int[][] grid) {
         this.rows = grid.length;
         this.cols = grid[0].length;
@@ -50,12 +55,19 @@ public class Recto {
                 }
             }
         }
+        this.cluePlaced = new boolean[clues.size()];
+        this.cellCandidates = new ArrayList[rows][cols];
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                cellCandidates[r][c] = new ArrayList<>();
+            }
+        }
+
         generateCandidates();
     }
 
     private void generateCandidates() {
         for (Clue clue : clues) {
-            List<Rect> valid = new ArrayList<>();
             for (int h = 1; h < clue.sum; h++) {
                 int w = clue.sum - h;
                 if (h > rows || w > cols) continue;
@@ -70,12 +82,18 @@ public class Recto {
                         int r2 = r1 + h - 1;
                         int c2 = c1 + w - 1;
 
-                        if (containsOtherClues(r1, c1, r2, c2, clue.id)) continue;
-                        valid.add(new Rect(r1, c1, r2, c2));
+                        if (!containsOtherClues(r1, c1, r2, c2, clue.id)) {
+                            Rect rect = new Rect(clue.id, r1, c1, r2, c2);
+                            allCandidateRects.add(rect);
+                            for (int r = r1; r <= r2; r++) {
+                                for (int c = c1; c <= c2; c++) {
+                                    cellCandidates[r][c].add(rect);
+                                }
+                            }
+                        }
                     }
                 }
             }
-            candidateRects.add(valid);
         }
     }
 
@@ -90,33 +108,61 @@ public class Recto {
     }
 
     public boolean solve() {
-        Integer[] order = new Integer[clues.size()];
-        for (int i = 0; i < clues.size(); i++) order[i] = i;
-        Arrays.sort(order, Comparator.comparingInt(i -> candidateRects.get(i).size()));
-
-        return backtrack(0, order);
+        return solveExactCover();
     }
 
-    private boolean backtrack(int index, Integer[] order) {
-        if (index == clues.size()) {
-            for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < cols; c++) {
-                    if (cellOwner[r][c] == -1) return false;
+    private boolean solveExactCover() {
+        // Find the most constrained unassigned cell
+        int bestR = -1;
+        int bestC = -1;
+        int minChoices = Integer.MAX_VALUE;
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (cellOwner[r][c] == -1) {
+                    int validCount = 0;
+                    for (Rect rect : cellCandidates[r][c]) {
+                        if (!cluePlaced[rect.clueId] && canPlace(rect)) {
+                            validCount++;
+                        }
+                    }
+
+                    if (validCount == 0) {
+                        return false; // Cell cannot be covered
+                    }
+
+                    if (validCount < minChoices) {
+                        minChoices = validCount;
+                        bestR = r;
+                        bestC = c;
+                        if (minChoices == 1) break;
+                    }
                 }
+            }
+            if (minChoices == 1) break;
+        }
+
+        // All cells are covered
+        if (bestR == -1) {
+            for (boolean placed : cluePlaced) {
+                if (!placed) return false;
             }
             return true;
         }
 
-        int clueIdx = order[index];
-        for (Rect rect : candidateRects.get(clueIdx)) {
-            if (canPlace(rect)) {
-                place(rect, clueIdx);
+        // Try candidate rectangles that cover (bestR, bestC)
+        for (Rect rect : cellCandidates[bestR][bestC]) {
+            if (!cluePlaced[rect.clueId] && canPlace(rect)) {
+                place(rect);
 
-                if (backtrack(index + 1, order)) return true;
+                if (solveExactCover()) {
+                    return true;
+                }
 
                 unplace(rect);
             }
         }
+
         return false;
     }
 
@@ -129,15 +175,17 @@ public class Recto {
         return true;
     }
 
-    private void place(Rect rect, int id) {
+    private void place(Rect rect) {
+        cluePlaced[rect.clueId] = true;
         for (int r = rect.r1; r <= rect.r2; r++) {
             for (int c = rect.c1; c <= rect.c2; c++) {
-                cellOwner[r][c] = id;
+                cellOwner[r][c] = rect.clueId;
             }
         }
     }
 
     private void unplace(Rect rect) {
+        cluePlaced[rect.clueId] = false;
         for (int r = rect.r1; r <= rect.r2; r++) {
             for (int c = rect.c1; c <= rect.c2; c++) {
                 cellOwner[r][c] = -1;
@@ -161,7 +209,7 @@ public class Recto {
                 for (int c = 0; c < cols; c++) {
                     boolean vBorder = (c == 0 || cellOwner[r][c - 1] != cellOwner[r][c]);
                     rowStr.append(vBorder ? "|" : " ");
-                    
+
                     if (grid[r][c] > 0) {
                         rowStr.append(String.format(" %d ", grid[r][c]));
                     } else {
