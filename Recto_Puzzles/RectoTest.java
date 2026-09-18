@@ -67,9 +67,6 @@ public class RectoTest {
             {0, 2}
         }, false);
 
-        // Intentionally unsolvable 8x8:
-        // Four 4x4 quadrants would require sums of 4+4=8, but clues of 7 only provide
-        // candidates (h+w=7) that have a maximum area of 12 (3x4), leaving the remaining 16 cells untiled.
         runTestCase("Intentionally Unsolvable (8x8)", new int[][]{
             {7, 0, 0, 0, 0, 0, 0, 7},
             {0, 0, 0, 0, 0, 0, 0, 0},
@@ -81,8 +78,6 @@ public class RectoTest {
             {7, 0, 0, 0, 0, 0, 0, 7}
         }, false);
 
-        // Solvable 8x8:
-        // Clean symmetrical tiling into four 4x4 quadrants (h=4, w=4 -> sum=8).
         runTestCase("Solvable Quadrants (8x8)", new int[][]{
             {8, 0, 0, 0, 0, 0, 0, 8},
             {0, 0, 0, 0, 0, 0, 0, 0},
@@ -92,6 +87,20 @@ public class RectoTest {
             {0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0, 0},
             {8, 0, 0, 0, 0, 0, 0, 8}
+        }, true);
+
+        // Verified Solvable Hard Puzzle (8x8):
+        // Partitioned into 8 rectangles totaling 64 cells. Clues (sums 5, 6, 7) are
+        // positioned with competing (h, w) factorizations to trigger search-tree branches.
+        runTestCase("Hard Branching Grid (8x8)", new int[][]{
+            {0, 0, 0, 0, 0, 6, 0, 0},
+            {0, 7, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 5, 0, 0, 6, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 6, 0, 0, 0, 0, 0},
+            {5, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 7, 0},
+            {0, 0, 0, 6, 0, 0, 0, 0}
         }, true);
 
         System.out.println("=========================================");
@@ -112,9 +121,13 @@ public class RectoTest {
     }
 
     private static void runTestCase(String testName, int[][] puzzle, boolean expectedSolvable) {
-        System.out.println("Running: " + testName);
         Recto solver = new Recto(puzzle);
         boolean actualSolvable = solver.solve();
+
+        System.out.println("-----------------------------------------");
+        System.out.println("Case: " + testName + " -> " + solver.getDifficultyWithDimensions()
+                + " (Backtracks: " + solver.getBacktrackCount() + ")");
+        System.out.println("-----------------------------------------");
 
         if (actualSolvable == expectedSolvable) {
             passedCount++;

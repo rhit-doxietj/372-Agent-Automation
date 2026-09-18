@@ -32,10 +32,13 @@ public class Recto {
     private final int cols;
     private final int[][] grid;
     private final List<Clue> clues = new ArrayList<>();
-    private final List<Rect> allCandidateRects = new ArrayList<>();
     private final List<Rect>[][] cellCandidates;
     private final int[][] cellOwner;
     private final boolean[] cluePlaced;
+
+    // Difficulty tracking fields
+    private int backtrackCount = 0;
+    private boolean isSolved = false;
 
     @SuppressWarnings("unchecked")
     public Recto(int[][] grid) {
@@ -84,7 +87,6 @@ public class Recto {
 
                         if (!containsOtherClues(r1, c1, r2, c2, clue.id)) {
                             Rect rect = new Rect(clue.id, r1, c1, r2, c2);
-                            allCandidateRects.add(rect);
                             for (int r = r1; r <= r2; r++) {
                                 for (int c = c1; c <= c2; c++) {
                                     cellCandidates[r][c].add(rect);
@@ -108,11 +110,12 @@ public class Recto {
     }
 
     public boolean solve() {
-        return solveExactCover();
+        backtrackCount = 0;
+        isSolved = solveExactCover();
+        return isSolved;
     }
 
     private boolean solveExactCover() {
-        // Find the most constrained unassigned cell
         int bestR = -1;
         int bestC = -1;
         int minChoices = Integer.MAX_VALUE;
@@ -128,7 +131,7 @@ public class Recto {
                     }
 
                     if (validCount == 0) {
-                        return false; // Cell cannot be covered
+                        return false;
                     }
 
                     if (validCount < minChoices) {
@@ -142,7 +145,6 @@ public class Recto {
             if (minChoices == 1) break;
         }
 
-        // All cells are covered
         if (bestR == -1) {
             for (boolean placed : cluePlaced) {
                 if (!placed) return false;
@@ -150,7 +152,6 @@ public class Recto {
             return true;
         }
 
-        // Try candidate rectangles that cover (bestR, bestC)
         for (Rect rect : cellCandidates[bestR][bestC]) {
             if (!cluePlaced[rect.clueId] && canPlace(rect)) {
                 place(rect);
@@ -160,6 +161,7 @@ public class Recto {
                 }
 
                 unplace(rect);
+                backtrackCount++; // Branch failed; track backtrack step
             }
         }
 
@@ -191,6 +193,37 @@ public class Recto {
                 cellOwner[r][c] = -1;
             }
         }
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public int getCols() {
+        return cols;
+    }
+
+    public int getBacktrackCount() {
+        return backtrackCount;
+    }
+
+    public String getDifficulty() {
+        if (!isSolved) {
+            return "Unsolvable";
+        }
+        if (backtrackCount == 0) {
+            return "Easy";
+        } else if (backtrackCount <= 10) {
+            return "Medium";
+        } else if (backtrackCount <= 50) {
+            return "Hard";
+        } else {
+            return "Expert";
+        }
+    }
+
+    public String getDifficultyWithDimensions() {
+        return getDifficulty() + " " + rows + "x" + cols;
     }
 
     public void printSolution() {
@@ -231,11 +264,13 @@ public class Recto {
             {0, 0, 0, 0, 0, 5, 4, 0},
             {0, 0, 0, 0, 0, 0, 0, 0},
             {0, 0, 7, 6, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 6, 7, 0}
+            {0, 0, 0, 0, 0, 0, 6, 7}
         };
 
         Recto solver = new Recto(puzzle);
         if (solver.solve()) {
+            System.out.println("Rating: " + solver.getDifficultyWithDimensions() 
+                + " (Backtracks: " + solver.getBacktrackCount() + ")");
             solver.printSolution();
         } else {
             System.out.println("No solution found.");
