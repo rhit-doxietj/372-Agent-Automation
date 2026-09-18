@@ -79,7 +79,7 @@ public class RectoGUI extends JFrame {
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setOpaque(false);
 
-        JLabel title = new JLabel("RECTO");
+        JLabel title = new JLabel("GRIDLOCK");
         title.setFont(new Font("SansSerif", Font.BOLD, 64));
         title.setForeground(Color.WHITE);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
