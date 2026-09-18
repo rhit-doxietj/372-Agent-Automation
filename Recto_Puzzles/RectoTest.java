@@ -103,6 +103,9 @@ public class RectoTest {
             {0, 0, 0, 6, 0, 0, 0, 0}
         }, true);
 
+        int[][] generatedPuzzle = RectoGenerator.generate(8, 8);
+        runTestCase("AI Generated 8x8 Puzzle", generatedPuzzle, true);
+
         System.out.println("=========================================");
         System.out.println("TEST RESULTS SUMMARY");
         System.out.println("=========================================");
