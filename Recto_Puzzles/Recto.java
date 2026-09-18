@@ -15,6 +15,7 @@ public class Recto {
         }
     }
 
+    
     static class Rect {
         int clueId;
         int r1, c1, r2, c2;
