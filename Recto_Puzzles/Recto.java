@@ -110,6 +110,9 @@ public class Recto {
         return false;
     }
 
+    public int getCellOwner(int r, int c) {
+        return cellOwner[r][c];
+    } 
     public boolean solve() {
         backtrackCount = 0;
         isSolved = solveExactCover();
