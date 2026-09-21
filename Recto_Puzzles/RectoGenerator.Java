@@ -20,18 +20,25 @@ public class RectoGenerator {
 
     private static final Random rand = new Random();
 
-    /**
-     * Overloaded static convenience generator accepting just rows and cols.
-     * Uses sensible defaults (minSide = 1, maxSide = 4).
-     */
-    public static int[][] generate(int rows, int cols) {
-        return generate(rows, cols, 1, Math.max(2, Math.min(rows, cols) / 2 + 1));
+    public static int[][] generateUnique(int rows, int cols) {
+        int maxAttempts = 500;
+        for (int i = 0; i < maxAttempts; i++) {
+            int[][] grid = generate(rows, cols);
+            Recto solver = new Recto(grid);
+            if (solver.countSolutions(2) == 1) {
+                return grid;
+            }
+        }
+        return generate(rows, cols);
     }
 
-    /**
-     * Static generator with custom side constraints.
-     */
-    public static int[][] generate(int rows, int cols, int minSide, int maxSide) {
+    public static int[][] generate(int rows, int cols) {
+        int minSide = Math.max(1, Math.min(rows, cols) / 4);
+        int maxSide = Math.max(2, Math.min(rows, cols) / 2 + 1);
+
+        int maxTwos = Math.max(1, (rows * cols) / 16);
+        int currentTwos = 0;
+
         List<Box> partitions = new ArrayList<>();
         partition(new Box(0, 0, rows - 1, cols - 1), minSide, maxSide, partitions);
 
@@ -41,6 +48,13 @@ public class RectoGenerator {
             int h = box.height();
             int w = box.width();
             int clueValue = h + w;
+
+            if (clueValue == 2) {
+                if (currentTwos >= maxTwos) {
+                    continue; 
+                }
+                currentTwos++;
+            }
 
             int clueR = box.r1 + rand.nextInt(h);
             int clueC = box.c1 + rand.nextInt(w);

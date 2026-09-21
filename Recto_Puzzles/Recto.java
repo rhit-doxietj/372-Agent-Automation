@@ -15,7 +15,6 @@ public class Recto {
         }
     }
 
-    
     static class Rect {
         int clueId;
         int r1, c1, r2, c2;
@@ -37,7 +36,6 @@ public class Recto {
     private final int[][] cellOwner;
     private final boolean[] cluePlaced;
 
-    // Difficulty tracking fields
     private int backtrackCount = 0;
     private boolean isSolved = false;
 
@@ -113,10 +111,63 @@ public class Recto {
     public int getCellOwner(int r, int c) {
         return cellOwner[r][c];
     } 
+
     public boolean solve() {
         backtrackCount = 0;
         isSolved = solveExactCover();
         return isSolved;
+    }
+
+    public int countSolutions(int limit) {
+        return countSolutionsRecursive(limit);
+    }
+
+    private int countSolutionsRecursive(int limit) {
+        int bestR = -1;
+        int bestC = -1;
+        int minChoices = Integer.MAX_VALUE;
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (cellOwner[r][c] == -1) {
+                    int validCount = 0;
+                    for (Rect rect : cellCandidates[r][c]) {
+                        if (!cluePlaced[rect.clueId] && canPlace(rect)) {
+                            validCount++;
+                        }
+                    }
+
+                    if (validCount == 0) return 0;
+
+                    if (validCount < minChoices) {
+                        minChoices = validCount;
+                        bestR = r;
+                        bestC = c;
+                        if (minChoices == 1) break;
+                    }
+                }
+            }
+            if (minChoices == 1) break;
+        }
+
+        if (bestR == -1) {
+            for (boolean placed : cluePlaced) {
+                if (!placed) return 0;
+            }
+            return 1;
+        }
+
+        int solutions = 0;
+        for (Rect rect : cellCandidates[bestR][bestC]) {
+            if (!cluePlaced[rect.clueId] && canPlace(rect)) {
+                place(rect);
+                solutions += countSolutionsRecursive(limit - solutions);
+                unplace(rect);
+                if (solutions >= limit) break;
+            }
+        }
+
+        return solutions;
     }
 
     private boolean solveExactCover() {
@@ -134,9 +185,7 @@ public class Recto {
                         }
                     }
 
-                    if (validCount == 0) {
-                        return false;
-                    }
+                    if (validCount == 0) return false;
 
                     if (validCount < minChoices) {
                         minChoices = validCount;
@@ -160,12 +209,10 @@ public class Recto {
             if (!cluePlaced[rect.clueId] && canPlace(rect)) {
                 place(rect);
 
-                if (solveExactCover()) {
-                    return true;
-                }
+                if (solveExactCover()) return true;
 
                 unplace(rect);
-                backtrackCount++; // Branch failed; track backtrack step
+                backtrackCount++;
             }
         }
 
@@ -199,31 +246,16 @@ public class Recto {
         }
     }
 
-    public int getRows() {
-        return rows;
-    }
-
-    public int getCols() {
-        return cols;
-    }
-
-    public int getBacktrackCount() {
-        return backtrackCount;
-    }
+    public int getRows() { return rows; }
+    public int getCols() { return cols; }
+    public int getBacktrackCount() { return backtrackCount; }
 
     public String getDifficulty() {
-        if (!isSolved) {
-            return "Unsolvable";
-        }
-        if (backtrackCount == 0) {
-            return "Easy";
-        } else if (backtrackCount <= 10) {
-            return "Medium";
-        } else if (backtrackCount <= 50) {
-            return "Hard";
-        } else {
-            return "Expert";
-        }
+        if (!isSolved) return "Unsolvable";
+        if (backtrackCount == 0) return "Easy";
+        else if (backtrackCount <= 10) return "Medium";
+        else if (backtrackCount <= 50) return "Hard";
+        else return "Expert";
     }
 
     public String getDifficultyWithDimensions() {
@@ -256,28 +288,6 @@ public class Recto {
                 rowStr.append("|");
                 System.out.println(rowStr);
             }
-        }
-    }
-
-    public static void main(String[] args) {
-        int[][] puzzle = {
-            {4, 6, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 3, 5, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 3, 2, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 5, 4, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 7, 6, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 6, 7}
-        };
-
-        Recto solver = new Recto(puzzle);
-        if (solver.solve()) {
-            System.out.println("Rating: " + solver.getDifficultyWithDimensions() 
-                + " (Backtracks: " + solver.getBacktrackCount() + ")");
-            solver.printSolution();
-        } else {
-            System.out.println("No solution found.");
         }
     }
 }
