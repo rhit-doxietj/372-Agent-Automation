@@ -4,106 +4,72 @@ import java.util.Random;
 
 public class RectoGenerator {
 
-    static class Box {
-        int r1, c1, r2, c2;
-
-        Box(int r1, int c1, int r2, int c2) {
-            this.r1 = r1;
-            this.c1 = c1;
-            this.r2 = r2;
-            this.c2 = c2;
-        }
-
-        int height() { return r2 - r1 + 1; }
-        int width()  { return c2 - c1 + 1; }
+    public static int[][] generate(int rows, int cols) {
+        return generateUnique(rows, cols);
     }
-
-    private static final Random rand = new Random();
 
     public static int[][] generateUnique(int rows, int cols) {
-        int maxAttempts = 500;
-        for (int i = 0; i < maxAttempts; i++) {
-            int[][] grid = generate(rows, cols);
-            Recto solver = new Recto(grid);
-            if (solver.countSolutions(2) == 1) {
-                return grid;
+        int[][] grid = new int[rows][cols];
+        Random rand = new Random();
+
+        List<Recto.Rect> allRects = new ArrayList<>();
+        int sectorSize = 6;
+
+        for (int r = 0; r < rows; r += sectorSize) {
+            int rEnd = Math.min(r + sectorSize - 1, rows - 1);
+            for (int c = 0; c < cols; c += sectorSize) {
+                int cEnd = Math.min(c + sectorSize - 1, cols - 1);
+                
+                List<Recto.Rect> sectorRects = generateSectorPartition(r, c, rEnd, cEnd, rand);
+                allRects.addAll(sectorRects);
             }
         }
-        return generate(rows, cols);
-    }
 
-    public static int[][] generate(int rows, int cols) {
-        int minSide = Math.max(1, Math.min(rows, cols) / 4);
-        int maxSide = Math.max(2, Math.min(rows, cols) / 2 + 1);
-
-        int maxTwos = Math.max(1, (rows * cols) / 16);
-        int currentTwos = 0;
-
-        List<Box> partitions = new ArrayList<>();
-        partition(new Box(0, 0, rows - 1, cols - 1), minSide, maxSide, partitions);
-
-        int[][] puzzle = new int[rows][cols];
-
-        for (Box box : partitions) {
-            int h = box.height();
-            int w = box.width();
-            int clueValue = h + w;
-
-            if (clueValue == 2) {
-                if (currentTwos >= maxTwos) {
-                    continue; 
-                }
-                currentTwos++;
-            }
-
-            int clueR = box.r1 + rand.nextInt(h);
-            int clueC = box.c1 + rand.nextInt(w);
-
-            puzzle[clueR][clueC] = clueValue;
+        for (Recto.Rect rect : allRects) {
+            int h = rect.r2 - rect.r1 + 1;
+            int w = rect.c2 - rect.c1 + 1;
+            
+            int clueR = rect.r1 + rand.nextInt(h);
+            int clueC = rect.c1 + rand.nextInt(w);
+            
+            grid[clueR][clueC] = h + w;
         }
 
-        return puzzle;
+        return grid;
     }
 
-    private static void partition(Box box, int minSide, int maxSide, List<Box> result) {
-        int h = box.height();
-        int w = box.width();
+    private static List<Recto.Rect> generateSectorPartition(int r1, int c1, int r2, int c2, Random rand) {
+        List<Recto.Rect> result = new ArrayList<>();
+        subdivide(r1, c1, r2, c2, result, rand);
+        return result;
+    }
 
-        boolean canSplitH = h >= 2 * minSide;
-        boolean canSplitV = w >= 2 * minSide;
+    private static void subdivide(int r1, int c1, int r2, int c2, List<Recto.Rect> result, Random rand) {
+        int h = r2 - r1 + 1;
+        int w = c2 - c1 + 1;
 
-        boolean mustSplit = (h > maxSide) || (w > maxSide);
-        if (!mustSplit && (!canSplitH && !canSplitV || rand.nextDouble() < 0.25)) {
-            result.add(box);
+        if (h <= 3 && w <= 3 && (h * w <= 6 || rand.nextBoolean())) {
+            result.add(new Recto.Rect(-1, r1, c1, r2, c2));
             return;
         }
 
-        if (!canSplitH && !canSplitV) {
-            result.add(box);
-            return;
+        boolean splitHorizontally;
+        if (h > 2 && w > 2) {
+            splitHorizontally = rand.nextBoolean();
+        } else {
+            splitHorizontally = (h > 2);
         }
 
-        boolean splitHorizontal;
-        if (canSplitH && canSplitV) {
-            if (h > w * 1.5) {
-                splitHorizontal = true;
-            } else if (w > h * 1.5) {
-                splitHorizontal = false;
-            } else {
-                splitHorizontal = rand.nextBoolean();
-            }
+        if (splitHorizontally && h > 2) {
+            int split = r1 + 1 + rand.nextInt(h - 2);
+            subdivide(r1, c1, split, c2, result, rand);
+            subdivide(split + 1, c1, r2, c2, result, rand);
+        } else if (w > 2) {
+            int split = c1 + 1 + rand.nextInt(w - 2);
+            subdivide(r1, c1, r2, split, result, rand);
+            subdivide(r1, split + 1, r2, c2, result, rand);
         } else {
-            splitHorizontal = canSplitH;
-        }
-
-        if (splitHorizontal) {
-            int splitR = box.r1 + minSide + rand.nextInt(h - 2 * minSide + 1) - 1;
-            partition(new Box(box.r1, box.c1, splitR, box.c2), minSide, maxSide, result);
-            partition(new Box(splitR + 1, box.c1, box.r2, box.c2), minSide, maxSide, result);
-        } else {
-            int splitC = box.c1 + minSide + rand.nextInt(w - 2 * minSide + 1) - 1;
-            partition(new Box(box.r1, box.c1, box.r2, splitC), minSide, maxSide, result);
-            partition(new Box(box.r1, splitC + 1, box.r2, box.c2), minSide, maxSide, result);
+            result.add(new Recto.Rect(-1, r1, c1, r2, c2));
         }
     }
 }

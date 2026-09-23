@@ -3,6 +3,7 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
@@ -14,40 +15,53 @@ public class RectoGUI extends JFrame {
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel mainPanel = new JPanel(cardLayout);
 
+    // Active Selection State
     private GameMode selectedMode = GameMode.CLASSIC;
     private BoardSize selectedSize = BoardSize.MEDIUM;
     private String selectedDifficulty = "Medium";
     private int customRows = 8;
     private int customCols = 8;
 
+    // Global Audio Controls
+    private float soundVolume = 0.8f;
+    private boolean soundMuted = false;
+
+    // Game Board State
     private int lives = 3;
     private int timerSeconds = 0;
     private Timer gameTimer;
     private int[][] grid;
+    private int[][] clueIndexMap; // Maps grid coordinates directly to clue IDs
     private Recto solver;
     private final List<Recto.Rect> playerRects = new ArrayList<>();
     private boolean[][] revealedCells;
     private boolean isGameOver = false;
     private boolean showSolutionOverlay = false;
+    private boolean isGameActive = false;
 
+    // Selection Tracking
     private Point dragStart = null;
     private Point dragEnd = null;
 
     private Recto.Rect errorRect = null;
     private Timer errorTimer = null;
 
+    // UI HUD Components
     private JLabel timerLabel;
     private JLabel livesLabel;
+    private JPanel gameOverBar;
+    private JButton showSolutionBtn;
     private BoardPanel boardPanel;
 
     public RectoGUI() {
         setTitle("Recto Puzzle Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(900, 700);
+        setSize(950, 750);
         setLocationRelativeTo(null);
 
         mainPanel.add(createHomeScreen(), "HOME");
         mainPanel.add(createGameModeScreen(), "MODES");
+        mainPanel.add(createPuzzleSetupScreen(), "PUZZLE_SETUP");
         mainPanel.add(createSettingsScreen(), "SETTINGS");
         mainPanel.add(createGamePlayScreen(), "GAME");
 
@@ -73,7 +87,7 @@ public class RectoGUI extends JFrame {
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setOpaque(false);
 
-        JLabel title = new JLabel("GRIDLOCK");
+        JLabel title = new JLabel("RECTO-ROOM");
         title.setFont(new Font("SansSerif", Font.BOLD, 64));
         title.setForeground(Color.WHITE);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -96,7 +110,7 @@ public class RectoGUI extends JFrame {
         quitBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         startBtn.addActionListener(e -> cardLayout.show(mainPanel, "MODES"));
-        settingsBtn.addActionListener(e -> JOptionPane.showMessageDialog(this, "Settings: Audio and Display options can be adjusted here.", "Settings", JOptionPane.INFORMATION_MESSAGE));
+        settingsBtn.addActionListener(e -> cardLayout.show(mainPanel, "SETTINGS"));
         quitBtn.addActionListener(e -> System.exit(0));
 
         centerPanel.add(Box.createVerticalGlue());
@@ -120,11 +134,14 @@ public class RectoGUI extends JFrame {
                 "2. Each box must enclose EXACTLY ONE clue number.\n" +
                 "3. The dimensions of the box (Height + Width) must equal the clue number (h + w = Clue).\n" +
                 "4. All cells on the grid must be covered to complete the puzzle.\n\n" +
+                "CONTROLS:\n" +
+                "- Click and drag across cells to form a box.\n" +
+                "- Right-click (or click) an existing box to remove/deselect it.\n\n" +
                 "GAME MODES:\n" +
                 "- Classic: Standard puzzle with 3 Lives.\n" +
                 "- Time Trial: Solve against a scaling clock with 3 Lives.\n" +
-                "- Hardcore: 1 mistake and it's Game Over!\n" +
-                "- Fog of War: Board is obscured until you unlock adjacent areas.";
+                "- Hardcore: 1 mistake equals Game Over!\n" +
+                "- Fog of War: Grid is obscured until adjacent areas are solved.";
         JOptionPane.showMessageDialog(this, rulesText, "How to Play Recto", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -159,7 +176,7 @@ public class RectoGUI extends JFrame {
 
         panel.add(modesGrid, BorderLayout.CENTER);
 
-        JButton backBtn = new JButton("Back");
+        JButton backBtn = new JButton("Back to Main Menu");
         styleButton(backBtn, new Color(100, 100, 100));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "HOME"));
         panel.add(backBtn, BorderLayout.SOUTH);
@@ -189,17 +206,17 @@ public class RectoGUI extends JFrame {
 
     private void selectMode(GameMode mode) {
         this.selectedMode = mode;
-        cardLayout.show(mainPanel, "SETTINGS");
+        cardLayout.show(mainPanel, "PUZZLE_SETUP");
     }
 
-    private JPanel createSettingsScreen() {
+    private JPanel createPuzzleSetupScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(40, 44, 52));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel title = new JLabel("World & Board Settings", SwingConstants.CENTER);
+        JLabel title = new JLabel("Puzzle Configuration", SwingConstants.CENTER);
         title.setFont(new Font("SansSerif", Font.BOLD, 28));
         title.setForeground(Color.WHITE);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
@@ -215,14 +232,14 @@ public class RectoGUI extends JFrame {
         gbc.gridx = 1;
         panel.add(sizeCombo, gbc);
 
-        JLabel rowLbl = new JLabel("Custom Rows (1-100):");
+        JLabel rowLbl = new JLabel("Custom Rows (1-99):");
         rowLbl.setForeground(Color.GRAY);
-        JSpinner rowSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 100, 1));
+        JSpinner rowSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 99, 1));
         rowSpinner.setEnabled(false);
 
-        JLabel colLbl = new JLabel("Custom Cols (1-100):");
+        JLabel colLbl = new JLabel("Custom Cols (1-99):");
         colLbl.setForeground(Color.GRAY);
-        JSpinner colSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 100, 1));
+        JSpinner colSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 99, 1));
         colSpinner.setEnabled(false);
 
         gbc.gridy = 2; gbc.gridx = 0; panel.add(rowLbl, gbc);
@@ -254,14 +271,17 @@ public class RectoGUI extends JFrame {
         diffCombo.setSelectedIndex(1);
         gbc.gridx = 1;
         panel.add(diffCombo, gbc);
-
         diffCombo.addActionListener(e -> selectedDifficulty = (String) diffCombo.getSelectedItem());
 
-        JButton launchBtn = new JButton("Confirm & Generate Board");
-        styleButton(launchBtn, new Color(46, 139, 87));
-        gbc.gridy = 5; gbc.gridx = 0; gbc.gridwidth = 2; gbc.insets = new Insets(30, 10, 10, 10);
-        panel.add(launchBtn, gbc);
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        btnPanel.setOpaque(false);
 
+        JButton backBtn = new JButton("Back");
+        styleButton(backBtn, new Color(100, 100, 100));
+        backBtn.addActionListener(e -> cardLayout.show(mainPanel, "MODES"));
+
+        JButton launchBtn = new JButton("Play Puzzle");
+        styleButton(launchBtn, new Color(46, 139, 87));
         launchBtn.addActionListener(e -> {
             if (selectedSize == BoardSize.CUSTOM) {
                 this.customRows = (int) rowSpinner.getValue();
@@ -269,6 +289,55 @@ public class RectoGUI extends JFrame {
             }
             startNewGame();
         });
+
+        btnPanel.add(backBtn);
+        btnPanel.add(launchBtn);
+
+        gbc.gridy = 5; gbc.gridx = 0; gbc.gridwidth = 2; gbc.insets = new Insets(20, 10, 10, 10);
+        panel.add(btnPanel, gbc);
+
+        return panel;
+    }
+
+    private JPanel createSettingsScreen() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(40, 44, 52));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 15, 15, 15);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel title = new JLabel("Sound Settings", SwingConstants.CENTER);
+        title.setFont(new Font("SansSerif", Font.BOLD, 28));
+        title.setForeground(Color.WHITE);
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        panel.add(title, gbc);
+
+        gbc.gridwidth = 1; gbc.gridy = 1; gbc.gridx = 0;
+        JLabel soundLbl = new JLabel("Sound Volume:");
+        soundLbl.setForeground(Color.WHITE);
+        panel.add(soundLbl, gbc);
+
+        JSlider volSlider = new JSlider(0, 100, (int) (soundVolume * 100));
+        volSlider.setOpaque(false);
+        volSlider.addChangeListener(e -> soundVolume = volSlider.getValue() / 100.0f);
+        gbc.gridx = 1;
+        panel.add(volSlider, gbc);
+
+        gbc.gridy = 2; gbc.gridx = 0;
+        JCheckBox muteBox = new JCheckBox("Mute Audio");
+        muteBox.setSelected(soundMuted);
+        muteBox.setForeground(Color.WHITE);
+        muteBox.setOpaque(false);
+        muteBox.addActionListener(e -> soundMuted = muteBox.isSelected());
+        gbc.gridwidth = 2;
+        panel.add(muteBox, gbc);
+
+        JButton backBtn = new JButton("Back to Main Menu");
+        styleButton(backBtn, new Color(100, 100, 100));
+        backBtn.addActionListener(e -> cardLayout.show(mainPanel, "HOME"));
+
+        gbc.gridy = 3; gbc.gridx = 0; gbc.gridwidth = 2; gbc.insets = new Insets(20, 10, 10, 10);
+        panel.add(backBtn, gbc);
 
         return panel;
     }
@@ -289,19 +358,55 @@ public class RectoGUI extends JFrame {
         timerLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
         timerLabel.setForeground(Color.CYAN);
 
+        JPanel navControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        navControls.setOpaque(false);
+
         JButton menuBtn = new JButton("Main Menu");
         styleButton(menuBtn, new Color(100, 100, 100));
+        menuBtn.setPreferredSize(new Dimension(120, 35));
         menuBtn.addActionListener(e -> {
             if (gameTimer != null) gameTimer.stop();
+            isGameActive = false;
             cardLayout.show(mainPanel, "HOME");
         });
+
+        navControls.add(menuBtn);
 
         hud.add(livesLabel, BorderLayout.WEST);
         hud.add(timerLabel, BorderLayout.CENTER);
         timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        hud.add(menuBtn, BorderLayout.EAST);
+        hud.add(navControls, BorderLayout.EAST);
 
-        panel.add(hud, BorderLayout.NORTH);
+        gameOverBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        gameOverBar.setBackground(new Color(180, 40, 40));
+        gameOverBar.setVisible(false);
+
+        JLabel gameOverText = new JLabel("GAME OVER!");
+        gameOverText.setFont(new Font("SansSerif", Font.BOLD, 18));
+        gameOverText.setForeground(Color.WHITE);
+
+        showSolutionBtn = new JButton("Show Solution");
+        styleButton(showSolutionBtn, new Color(70, 130, 180));
+        showSolutionBtn.addActionListener(e -> {
+            showSolutionOverlay = !showSolutionOverlay;
+            showSolutionBtn.setText(showSolutionOverlay ? "Hide Solution" : "Show Solution");
+            boardPanel.repaint();
+        });
+
+        JButton retryBtn = new JButton("Try Again");
+        styleButton(retryBtn, new Color(46, 139, 87));
+        retryBtn.addActionListener(e -> startNewGame());
+
+        gameOverBar.add(gameOverText);
+        gameOverBar.add(showSolutionBtn);
+        gameOverBar.add(retryBtn);
+
+        JPanel topContainer = new JPanel(new BorderLayout());
+        topContainer.setOpaque(false);
+        topContainer.add(hud, BorderLayout.NORTH);
+        topContainer.add(gameOverBar, BorderLayout.SOUTH);
+
+        panel.add(topContainer, BorderLayout.NORTH);
 
         boardPanel = new BoardPanel();
         panel.add(boardPanel, BorderLayout.CENTER);
@@ -310,6 +415,7 @@ public class RectoGUI extends JFrame {
     }
 
     private void startNewGame() {
+        isGameActive = true;
         int r = 8, c = 8;
         switch (selectedSize) {
             case SMALL -> { r = 5; c = 5; }
@@ -319,25 +425,57 @@ public class RectoGUI extends JFrame {
         }
 
         this.grid = RectoGenerator.generateUnique(r, c);
+        this.clueIndexMap = new int[r][c];
+        
+        // Build authoritative clue ID map matching Recto's scan order
+        for (int i = 0; i < r; i++) {
+            Arrays.fill(this.clueIndexMap[i], -1);
+        }
+
+        int clueCounter = 0;
+        for (int row = 0; row < r; row++) {
+            for (int col = 0; col < c; col++) {
+                if (grid[row][col] > 0) {
+                    clueIndexMap[row][col] = clueCounter++;
+                }
+            }
+        }
+
         this.solver = new Recto(grid);
-        this.solver.solve();
+        if (r <= 10 && c <= 10) {
+            this.solver.solve();
+        } else {
+            new Thread(() -> this.solver.solve()).start();
+        }
 
         this.playerRects.clear();
         this.errorRect = null;
         if (errorTimer != null) errorTimer.stop();
+
         this.isGameOver = false;
         this.showSolutionOverlay = false;
+        this.gameOverBar.setVisible(false);
+        this.showSolutionBtn.setText("Show Solution");
 
         this.lives = (selectedMode == GameMode.HARDCORE) ? 1 : 3;
         livesLabel.setText("Lives: " + lives);
 
         this.revealedCells = new boolean[r][c];
         if (selectedMode == GameMode.FOG_OF_WAR) {
-            for (int i = 0; i < Math.min(3, r); i++) {
-                for (int j = 0; j < Math.min(3, c); j++) {
-                    revealedCells[i][j] = true;
+            List<Point> clueLocations = new ArrayList<>();
+            for (int row = 0; row < r; row++) {
+                for (int col = 0; col < c; col++) {
+                    if (grid[row][col] > 0) {
+                        clueLocations.add(new Point(row, col));
+                    }
                 }
             }
+
+            if (!clueLocations.isEmpty()) {
+                Point firstClue = clueLocations.get(0);
+                revealAroundCell(firstClue.x, firstClue.y, 1);
+            }
+            updateFogOfWar(null);
         } else {
             for (boolean[] row : revealedCells) Arrays.fill(row, true);
         }
@@ -361,13 +499,88 @@ public class RectoGUI extends JFrame {
         boardPanel.repaint();
     }
 
+    private void revealAroundCell(int cr, int cc, int radius) {
+        int rMax = grid.length;
+        int cMax = grid[0].length;
+        for (int r = Math.max(0, cr - radius); r <= Math.min(rMax - 1, cr + radius); r++) {
+            for (int c = Math.max(0, cc - radius); c <= Math.min(cMax - 1, cc + radius); c++) {
+                revealedCells[r][c] = true;
+            }
+        }
+    }
+
+    private void updateFogOfWar(Recto.Rect placed) {
+        if (selectedMode != GameMode.FOG_OF_WAR) return;
+
+        if (placed != null) {
+            int r1 = Math.max(0, placed.r1 - 1);
+            int r2 = Math.min(grid.length - 1, placed.r2 + 1);
+            int c1 = Math.max(0, placed.c1 - 1);
+            int c2 = Math.min(grid[0].length - 1, placed.c2 + 1);
+
+            for (int r = r1; r <= r2; r++) {
+                for (int c = c1; c <= c2; c++) {
+                    revealedCells[r][c] = true;
+                }
+            }
+        }
+
+        boolean hasVisibleUnsolvedClue = false;
+        List<Point> unsolvedClues = new ArrayList<>();
+
+        for (int r = 0; r < grid.length; r++) {
+            for (int c = 0; c < grid[0].length; c++) {
+                if (grid[r][c] > 0) {
+                    final int row = r;
+                    final int col = c;
+                    boolean solved = playerRects.stream().anyMatch(rect -> 
+                        row >= rect.r1 && row <= rect.r2 && col >= rect.c1 && col <= rect.c2
+                    );
+
+                    if (!solved) {
+                        unsolvedClues.add(new Point(r, c));
+                        if (revealedCells[r][c]) {
+                            hasVisibleUnsolvedClue = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!hasVisibleUnsolvedClue && !unsolvedClues.isEmpty()) {
+            Point closest = null;
+            double minDistance = Double.MAX_VALUE;
+
+            for (Point clue : unsolvedClues) {
+                for (int r = 0; r < grid.length; r++) {
+                    for (int c = 0; c < grid[0].length; c++) {
+                        if (revealedCells[r][c]) {
+                            double dist = Math.hypot(clue.x - r, clue.y - c);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                closest = clue;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (closest != null) {
+                revealAroundCell(closest.x, closest.y, 1);
+            } else {
+                Point fallback = unsolvedClues.get(0);
+                revealAroundCell(fallback.x, fallback.y, 1);
+            }
+        }
+    }
+
     private void handleTimerTick() {
         if (isGameOver) return;
 
         if (selectedMode == GameMode.TIME_TRIAL) {
             timerSeconds--;
             if (timerSeconds <= 0) {
-                triggerGameOver("Time Expired!");
+                triggerGameOver();
             }
         } else {
             timerSeconds++;
@@ -381,27 +594,13 @@ public class RectoGUI extends JFrame {
         timerLabel.setText(String.format("Time: %02d:%02d", m, s));
     }
 
-    private void triggerGameOver(String reason) {
+    private void triggerGameOver() {
         this.isGameOver = true;
-        this.showSolutionOverlay = true;
         if (gameTimer != null) gameTimer.stop();
+        playSound(false);
 
+        gameOverBar.setVisible(true);
         boardPanel.repaint();
-
-        int result = JOptionPane.showOptionDialog(this,
-                reason + "\nWould you like to try again or return to the main menu?",
-                "Game Over",
-                JOptionPane.ERROR_MESSAGE,
-                JOptionPane.YES_NO_OPTION,
-                null,
-                new String[]{"Try Again", "Main Menu"},
-                "Try Again");
-
-        if (result == JOptionPane.YES_OPTION) {
-            startNewGame();
-        } else {
-            cardLayout.show(mainPanel, "HOME");
-        }
     }
 
     private void checkVictoryCondition() {
@@ -413,9 +612,49 @@ public class RectoGUI extends JFrame {
 
         if (coveredCells == totalCells) {
             if (gameTimer != null) gameTimer.stop();
+            isGameActive = false;
+            playSound(true);
             JOptionPane.showMessageDialog(this, "Congratulations! You solved the Recto puzzle!", "Victory", JOptionPane.INFORMATION_MESSAGE);
-            cardLayout.show(mainPanel, "HOME");
+            cardLayout.show(mainPanel, "MODES");
         }
+    }
+
+    private void playSound(boolean isCorrect) {
+        if (soundMuted || soundVolume <= 0.01f) return;
+
+        new Thread(() -> {
+            try {
+                float sampleRate = 44100;
+                int durationMs = isCorrect ? 450 : 350;
+                int numSamples = (int) (durationMs * sampleRate / 1000);
+                byte[] buffer = new byte[numSamples];
+
+                for (int i = 0; i < numSamples; i++) {
+                    double t = i / sampleRate;
+                    double wave;
+                    if (isCorrect) {
+                        double freq1 = 1046.50;
+                        double freq2 = 1318.51;
+                        
+                        double envelope = Math.exp(-t * 6.0); 
+                        double tone1 = Math.sin(2 * Math.PI * freq1 * t);
+                        double tone2 = Math.sin(2 * Math.PI * freq2 * t);
+                        wave = ((tone1 + tone2) * 0.5) * envelope;
+                    } else {
+                        wave = (t * 150) % 1.0 - 0.5;
+                    }
+                    buffer[i] = (byte) (wave * 60 * soundVolume);
+                }
+
+                AudioFormat af = new AudioFormat(sampleRate, 8, 1, true, false);
+                SourceDataLine line = AudioSystem.getSourceDataLine(af);
+                line.open(af);
+                line.start();
+                line.write(buffer, 0, buffer.length);
+                line.drain();
+                line.close();
+            } catch (Exception ignored) {}
+        }).start();
     }
 
     private class BoardPanel extends JPanel {
@@ -430,6 +669,14 @@ public class RectoGUI extends JFrame {
                     if (isGameOver || grid == null) return;
                     Point cell = getCellAtPoint(e.getPoint());
                     if (cell != null) {
+                        Recto.Rect existing = getRectAtCell(cell.x, cell.y);
+                        if (existing != null && SwingUtilities.isRightMouseButton(e)) {
+                            playerRects.remove(existing);
+                            updateFogOfWar(null);
+                            repaint();
+                            return;
+                        }
+
                         dragStart = cell;
                         dragEnd = cell;
                         repaint();
@@ -449,6 +696,19 @@ public class RectoGUI extends JFrame {
                 @Override
                 public void mouseReleased(MouseEvent e) {
                     if (isGameOver || dragStart == null || dragEnd == null) return;
+
+                    if (dragStart.equals(dragEnd) && SwingUtilities.isLeftMouseButton(e)) {
+                        Recto.Rect existing = getRectAtCell(dragStart.x, dragStart.y);
+                        if (existing != null) {
+                            playerRects.remove(existing);
+                            updateFogOfWar(null);
+                            dragStart = null;
+                            dragEnd = null;
+                            repaint();
+                            return;
+                        }
+                    }
+
                     validateAndPlaceRect(dragStart, dragEnd);
                     dragStart = null;
                     dragEnd = null;
@@ -458,6 +718,15 @@ public class RectoGUI extends JFrame {
 
             addMouseListener(adapter);
             addMouseMotionListener(adapter);
+        }
+
+        private Recto.Rect getRectAtCell(int r, int c) {
+            for (Recto.Rect rect : playerRects) {
+                if (r >= rect.r1 && r <= rect.r2 && c >= rect.c1 && c <= rect.c2) {
+                    return rect;
+                }
+            }
+            return null;
         }
 
         private Point getCellAtPoint(Point p) {
@@ -491,16 +760,12 @@ public class RectoGUI extends JFrame {
             int foundClueValue = -1;
             int foundClueId = -1;
 
-            int clueIdTracker = 0;
-            for (int r = 0; r < grid.length; r++) {
-                for (int c = 0; c < grid[0].length; c++) {
+            for (int r = r1; r <= r2; r++) {
+                for (int c = c1; c <= c2; c++) {
                     if (grid[r][c] > 0) {
-                        if (r >= r1 && r <= r2 && c >= c1 && c <= c2) {
-                            clueCount++;
-                            foundClueValue = grid[r][c];
-                            foundClueId = clueIdTracker;
-                        }
-                        clueIdTracker++;
+                        clueCount++;
+                        foundClueValue = grid[r][c];
+                        foundClueId = clueIndexMap[r][c];
                     }
                 }
             }
@@ -513,20 +778,30 @@ public class RectoGUI extends JFrame {
                 }
             }
 
-            boolean isValid = (clueCount == 1) && ((h + w) == foundClueValue) && !overlaps;
+            // Verify basic placement rules: exactly 1 clue, valid height+width sum, no overlap
+            boolean followsBasicRules = (clueCount == 1) && ((h + w) == foundClueValue) && !overlaps;
 
-            if (isValid) {
-                playerRects.add(new Recto.Rect(foundClueId, r1, c1, r2, c2));
-
-                if (selectedMode == GameMode.FOG_OF_WAR) {
-                    for (int r = Math.max(0, r1 - 1); r <= Math.min(grid.length - 1, r2 + 1); r++) {
-                        for (int c = Math.max(0, c1 - 1); c <= Math.min(grid[0].length - 1, c2 + 1); c++) {
-                            revealedCells[r][c] = true;
-                        }
-                    }
+            boolean isValidPlacement = false;
+            if (followsBasicRules && foundClueId != -1) {
+                Recto.Rect expectedSolution = solver.getSolutionRect(foundClueId);
+                if (expectedSolution != null) {
+                    isValidPlacement = (expectedSolution.r1 == r1 && expectedSolution.r2 == r2 &&
+                                        expectedSolution.c1 == c1 && expectedSolution.c2 == c2);
+                } else {
+                    // Fallback to basic rule validation if background solver thread has not finished
+                    isValidPlacement = true;
                 }
+            }
+
+            if (isValidPlacement) {
+                playSound(true);
+                Recto.Rect placed = new Recto.Rect(foundClueId, r1, c1, r2, c2);
+                playerRects.add(placed);
+
+                updateFogOfWar(placed);
                 checkVictoryCondition();
             } else {
+                playSound(false);
                 lives--;
                 livesLabel.setText("Lives: " + lives);
 
@@ -540,7 +815,7 @@ public class RectoGUI extends JFrame {
                 errorTimer.start();
 
                 if (lives <= 0) {
-                    triggerGameOver("Out of Lives!");
+                    triggerGameOver();
                 }
             }
         }
@@ -555,7 +830,7 @@ public class RectoGUI extends JFrame {
 
             int rows = grid.length;
             int cols = grid[0].length;
-            int cellSize = Math.min((getHeight() - 2 * PADDING) / rows, (getWidth() - 2 * PADDING) / cols);
+            int cellSize = Math.max(2, Math.min((getHeight() - 2 * PADDING) / rows, (getWidth() - 2 * PADDING) / cols));
 
             int startX = (getWidth() - cols * cellSize) / 2;
             int startY = (getHeight() - rows * cellSize) / 2;
@@ -565,7 +840,7 @@ public class RectoGUI extends JFrame {
                     int x = startX + c * cellSize;
                     int y = startY + r * cellSize;
 
-                    if (selectedMode == GameMode.FOG_OF_WAR && !revealedCells[r][c]) {
+                    if (selectedMode == GameMode.FOG_OF_WAR && !revealedCells[r][c] && !showSolutionOverlay) {
                         g2.setColor(new Color(15, 15, 20));
                         g2.fillRect(x, y, cellSize, cellSize);
                         g2.setColor(new Color(30, 30, 40));
@@ -578,9 +853,9 @@ public class RectoGUI extends JFrame {
                     g2.setColor(new Color(60, 64, 76));
                     g2.drawRect(x, y, cellSize, cellSize);
 
-                    if (grid[r][c] > 0) {
+                    if (grid[r][c] > 0 && cellSize >= 10) {
                         g2.setColor(Color.WHITE);
-                        g2.setFont(new Font("SansSerif", Font.BOLD, cellSize / 2));
+                        g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(10, cellSize / 2)));
                         String valStr = String.valueOf(grid[r][c]);
                         FontMetrics fm = g2.getFontMetrics();
                         int tx = x + (cellSize - fm.stringWidth(valStr)) / 2;
@@ -590,7 +865,7 @@ public class RectoGUI extends JFrame {
                 }
             }
 
-            g2.setStroke(new BasicStroke(3));
+            g2.setStroke(new BasicStroke(Math.max(1, cellSize / 10)));
             for (Recto.Rect rect : playerRects) {
                 int rx = startX + rect.c1 * cellSize;
                 int ry = startY + rect.r1 * cellSize;
@@ -607,12 +882,12 @@ public class RectoGUI extends JFrame {
                 int rx = startX + errorRect.c1 * cellSize;
                 int ry = startY + errorRect.r1 * cellSize;
                 int rw = (errorRect.c2 - errorRect.c1 + 1) * cellSize;
-                int rh = (errorRect.r2 - errorRect.r1 + 1) * cellSize;
+                int erh = (errorRect.r2 - errorRect.r1 + 1) * cellSize;
 
                 g2.setColor(new Color(231, 76, 60, 100));
-                g2.fillRect(rx, ry, rw, rh);
+                g2.fillRect(rx, ry, rw, erh);
                 g2.setColor(new Color(231, 76, 60));
-                g2.drawRect(rx, ry, rw, rh);
+                g2.drawRect(rx, ry, rw, erh);
             }
 
             if (dragStart != null && dragEnd != null) {
@@ -633,7 +908,7 @@ public class RectoGUI extends JFrame {
             }
 
             if (showSolutionOverlay) {
-                g2.setStroke(new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{6}, 0));
+                g2.setStroke(new BasicStroke(Math.max(1, cellSize / 12), BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0));
                 g2.setColor(new Color(231, 76, 60));
 
                 for (int r = 0; r < rows; r++) {
@@ -659,7 +934,7 @@ public class RectoGUI extends JFrame {
         btn.setForeground(Color.WHITE);
         btn.setFont(new Font("SansSerif", Font.BOLD, 16));
         btn.setFocusPainted(false);
-        btn.setPreferredSize(new Dimension(200, 40));
+        btn.setPreferredSize(new Dimension(180, 40));
     }
 
     public static void main(String[] args) {

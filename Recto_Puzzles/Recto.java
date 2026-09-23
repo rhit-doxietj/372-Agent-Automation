@@ -1,25 +1,13 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Recto {
 
-    static class Clue {
-        int id;
-        int r, c;
-        int sum;
+    public static class Rect {
+        public int clueId;
+        public int r1, c1, r2, c2;
 
-        Clue(int id, int r, int c, int sum) {
-            this.id = id;
-            this.r = r;
-            this.c = c;
-            this.sum = sum;
-        }
-    }
-
-    static class Rect {
-        int clueId;
-        int r1, c1, r2, c2;
-
-        Rect(int clueId, int r1, int c1, int r2, int c2) {
+        public Rect(int clueId, int r1, int c1, int r2, int c2) {
             this.clueId = clueId;
             this.r1 = r1;
             this.c1 = c1;
@@ -28,266 +16,169 @@ public class Recto {
         }
     }
 
+    private final int[][] grid;
     private final int rows;
     private final int cols;
-    private final int[][] grid;
-    private final List<Clue> clues = new ArrayList<>();
-    private final List<Rect>[][] cellCandidates;
+    private final List<Point> clueLocations = new ArrayList<>();
+    private final List<Integer> clueValues = new ArrayList<>();
+    private final List<Rect>[] possibleRectsPerClue;
+    private final Rect[] solution;
     private final int[][] cellOwner;
-    private final boolean[] cluePlaced;
-
+    
     private int backtrackCount = 0;
-    private boolean isSolved = false;
+    private static final int MAX_BACKTRACKS = 50000;
 
     @SuppressWarnings("unchecked")
     public Recto(int[][] grid) {
+        this.grid = grid;
         this.rows = grid.length;
         this.cols = grid[0].length;
-        this.grid = grid;
-        this.cellOwner = new int[rows][cols];
-        for (int[] row : cellOwner) {
-            Arrays.fill(row, -1);
-        }
 
-        int id = 0;
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 if (grid[r][c] > 0) {
-                    clues.add(new Clue(id++, r, c, grid[r][c]));
+                    clueLocations.add(new Point(r, c));
+                    clueValues.add(grid[r][c]);
                 }
             }
         }
-        this.cluePlaced = new boolean[clues.size()];
-        this.cellCandidates = new ArrayList[rows][cols];
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                cellCandidates[r][c] = new ArrayList<>();
+
+        int numClues = clueLocations.size();
+        this.possibleRectsPerClue = new List[numClues];
+        this.solution = new Rect[numClues];
+        this.cellOwner = new int[rows][cols];
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                cellOwner[i][j] = -1;
             }
         }
 
-        generateCandidates();
+        generatePossibleRects();
     }
 
-    private void generateCandidates() {
-        for (Clue clue : clues) {
-            for (int h = 1; h < clue.sum; h++) {
-                int w = clue.sum - h;
+    private void generatePossibleRects() {
+        for (int i = 0; i < clueLocations.size(); i++) {
+            possibleRectsPerClue[i] = new ArrayList<>();
+            Point clue = clueLocations.get(i);
+            int val = clueValues.get(i);
+
+            for (int h = 1; h <= val - 1; h++) {
+                int w = val - h;
                 if (h > rows || w > cols) continue;
 
-                int minR = Math.max(0, clue.r - h + 1);
-                int maxR = Math.min(rows - h, clue.r);
-                int minC = Math.max(0, clue.c - w + 1);
-                int maxC = Math.min(cols - w, clue.c);
-
-                for (int r1 = minR; r1 <= maxR; r1++) {
-                    for (int c1 = minC; c1 <= maxC; c1++) {
-                        int r2 = r1 + h - 1;
+                for (int r1 = Math.max(0, clue.x - h + 1); r1 <= Math.min(rows - h, clue.x); r1++) {
+                    int r2 = r1 + h - 1;
+                    for (int c1 = Math.max(0, clue.y - w + 1); c1 <= Math.min(cols - w, clue.y); c1++) {
                         int c2 = c1 + w - 1;
 
-                        if (!containsOtherClues(r1, c1, r2, c2, clue.id)) {
-                            Rect rect = new Rect(clue.id, r1, c1, r2, c2);
-                            for (int r = r1; r <= r2; r++) {
-                                for (int c = c1; c <= c2; c++) {
-                                    cellCandidates[r][c].add(rect);
-                                }
-                            }
-                        }
+                        if (containsOtherClues(i, r1, c1, r2, c2)) continue;
+                        possibleRectsPerClue[i].add(new Rect(i, r1, c1, r2, c2));
                     }
                 }
             }
         }
     }
 
-    private boolean containsOtherClues(int r1, int c1, int r2, int c2, int currentId) {
-        for (Clue other : clues) {
-            if (other.id == currentId) continue;
-            if (other.r >= r1 && other.r <= r2 && other.c >= c1 && other.c <= c2) {
+    private boolean containsOtherClues(int currentClueId, int r1, int c1, int r2, int c2) {
+        for (int i = 0; i < clueLocations.size(); i++) {
+            if (i == currentClueId) continue;
+            Point clue = clueLocations.get(i);
+            if (clue.x >= r1 && clue.x <= r2 && clue.y >= c1 && clue.y <= c2) {
                 return true;
             }
         }
         return false;
     }
 
-    public int getCellOwner(int r, int c) {
-        return cellOwner[r][c];
-    } 
-
     public boolean solve() {
         backtrackCount = 0;
-        isSolved = solveExactCover();
-        return isSolved;
+        boolean[][] occupied = new boolean[rows][cols];
+        return backtrack(0, occupied);
     }
 
-    public int countSolutions(int limit) {
-        return countSolutionsRecursive(limit);
-    }
+    private boolean backtrack(int clueIndex, boolean[][] occupied) {
+        backtrackCount++;
+        if (backtrackCount > MAX_BACKTRACKS) return false;
 
-    private int countSolutionsRecursive(int limit) {
-        int bestR = -1;
-        int bestC = -1;
-        int minChoices = Integer.MAX_VALUE;
-
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                if (cellOwner[r][c] == -1) {
-                    int validCount = 0;
-                    for (Rect rect : cellCandidates[r][c]) {
-                        if (!cluePlaced[rect.clueId] && canPlace(rect)) {
-                            validCount++;
-                        }
-                    }
-
-                    if (validCount == 0) return 0;
-
-                    if (validCount < minChoices) {
-                        minChoices = validCount;
-                        bestR = r;
-                        bestC = c;
-                        if (minChoices == 1) break;
-                    }
+        if (clueIndex == clueLocations.size()) {
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (!occupied[r][c]) return false;
                 }
-            }
-            if (minChoices == 1) break;
-        }
-
-        if (bestR == -1) {
-            for (boolean placed : cluePlaced) {
-                if (!placed) return 0;
-            }
-            return 1;
-        }
-
-        int solutions = 0;
-        for (Rect rect : cellCandidates[bestR][bestC]) {
-            if (!cluePlaced[rect.clueId] && canPlace(rect)) {
-                place(rect);
-                solutions += countSolutionsRecursive(limit - solutions);
-                unplace(rect);
-                if (solutions >= limit) break;
-            }
-        }
-
-        return solutions;
-    }
-
-    private boolean solveExactCover() {
-        int bestR = -1;
-        int bestC = -1;
-        int minChoices = Integer.MAX_VALUE;
-
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                if (cellOwner[r][c] == -1) {
-                    int validCount = 0;
-                    for (Rect rect : cellCandidates[r][c]) {
-                        if (!cluePlaced[rect.clueId] && canPlace(rect)) {
-                            validCount++;
-                        }
-                    }
-
-                    if (validCount == 0) return false;
-
-                    if (validCount < minChoices) {
-                        minChoices = validCount;
-                        bestR = r;
-                        bestC = c;
-                        if (minChoices == 1) break;
-                    }
-                }
-            }
-            if (minChoices == 1) break;
-        }
-
-        if (bestR == -1) {
-            for (boolean placed : cluePlaced) {
-                if (!placed) return false;
             }
             return true;
         }
 
-        for (Rect rect : cellCandidates[bestR][bestC]) {
-            if (!cluePlaced[rect.clueId] && canPlace(rect)) {
-                place(rect);
+        for (Rect rect : possibleRectsPerClue[clueIndex]) {
+            if (canPlace(rect, occupied)) {
+                place(rect, occupied, clueIndex);
+                solution[clueIndex] = rect;
 
-                if (solveExactCover()) return true;
+                if (backtrack(clueIndex + 1, occupied)) {
+                    return true;
+                }
 
-                unplace(rect);
-                backtrackCount++;
+                remove(rect, occupied);
+                solution[clueIndex] = null;
             }
         }
-
         return false;
     }
 
-    private boolean canPlace(Rect rect) {
+    private boolean canPlace(Rect rect, boolean[][] occupied) {
         for (int r = rect.r1; r <= rect.r2; r++) {
             for (int c = rect.c1; c <= rect.c2; c++) {
-                if (cellOwner[r][c] != -1) return false;
+                if (occupied[r][c]) return false;
             }
         }
         return true;
     }
 
-    private void place(Rect rect) {
-        cluePlaced[rect.clueId] = true;
+    private void place(Rect rect, boolean[][] occupied, int clueId) {
         for (int r = rect.r1; r <= rect.r2; r++) {
             for (int c = rect.c1; c <= rect.c2; c++) {
-                cellOwner[r][c] = rect.clueId;
+                occupied[r][c] = true;
+                cellOwner[r][c] = clueId;
             }
         }
     }
 
-    private void unplace(Rect rect) {
-        cluePlaced[rect.clueId] = false;
+    private void remove(Rect rect, boolean[][] occupied) {
         for (int r = rect.r1; r <= rect.r2; r++) {
             for (int c = rect.c1; c <= rect.c2; c++) {
+                occupied[r][c] = false;
                 cellOwner[r][c] = -1;
             }
         }
     }
 
+    public Rect getSolutionRect(int clueId) {
+        if (clueId >= 0 && clueId < solution.length) {
+            return solution[clueId];
+        }
+        return null;
+    }
+
+    public int getCellOwner(int r, int c) {
+        if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            return cellOwner[r][c];
+        }
+        return -1;
+    }
+
     public int getRows() { return rows; }
     public int getCols() { return cols; }
     public int getBacktrackCount() { return backtrackCount; }
-
-    public String getDifficulty() {
-        if (!isSolved) return "Unsolvable";
-        if (backtrackCount == 0) return "Easy";
-        else if (backtrackCount <= 10) return "Medium";
-        else if (backtrackCount <= 50) return "Hard";
-        else return "Expert";
-    }
-
     public String getDifficultyWithDimensions() {
-        return getDifficulty() + " " + rows + "x" + cols;
+        return rows + "x" + cols + " Grid";
     }
 
-    public void printSolution() {
-        for (int r = 0; r <= rows; r++) {
-            StringBuilder sb = new StringBuilder();
-            for (int c = 0; c < cols; c++) {
-                sb.append("+");
-                boolean border = (r == 0 || r == rows || cellOwner[r - 1][c] != cellOwner[r][c]);
-                sb.append(border ? "---" : "   ");
-            }
-            sb.append("+");
-            System.out.println(sb);
-
-            if (r < rows) {
-                StringBuilder rowStr = new StringBuilder();
-                for (int c = 0; c < cols; c++) {
-                    boolean vBorder = (c == 0 || cellOwner[r][c - 1] != cellOwner[r][c]);
-                    rowStr.append(vBorder ? "|" : " ");
-
-                    if (grid[r][c] > 0) {
-                        rowStr.append(String.format(" %d ", grid[r][c]));
-                    } else {
-                        rowStr.append(" . ");
-                    }
-                }
-                rowStr.append("|");
-                System.out.println(rowStr);
-            }
+    public static class Point {
+        public int x, y;
+        public Point(int x, int y) {
+            this.x = x;
+            this.y = y;
         }
     }
 }

@@ -89,9 +89,6 @@ public class RectoTest {
             {8, 0, 0, 0, 0, 0, 0, 8}
         }, true);
 
-        // Verified Solvable Hard Puzzle (8x8):
-        // Partitioned into 8 rectangles totaling 64 cells. Clues (sums 5, 6, 7) are
-        // positioned with competing (h, w) factorizations to trigger search-tree branches.
         runTestCase("Hard Branching Grid (8x8)", new int[][]{
             {0, 0, 0, 0, 0, 6, 0, 0},
             {0, 7, 0, 0, 0, 0, 0, 0},
@@ -136,7 +133,7 @@ public class RectoTest {
             passedCount++;
             System.out.println("[PASS] " + testName + " (Solvable: " + actualSolvable + ")");
             if (actualSolvable) {
-                solver.printSolution();
+                printSolutionGrid(solver);
             }
         } else {
             failedCount++;
@@ -146,5 +143,18 @@ public class RectoTest {
             System.err.println("[FAIL] " + errorMsg);
         }
         System.out.println();
+    }
+
+    private static void printSolutionGrid(Recto solver) {
+        int rows = solver.getRows();
+        int cols = solver.getCols();
+        System.out.println("Solution Partition Map:");
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int owner = solver.getCellOwner(r, c);
+                System.out.printf("%3d ", owner);
+            }
+            System.out.println();
+        }
     }
 }
