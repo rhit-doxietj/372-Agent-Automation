@@ -24,15 +24,17 @@ public class Recto {
     private final List<Rect>[] possibleRectsPerClue;
     private final Rect[] solution;
     private final int[][] cellOwner;
-    
+
     private int backtrackCount = 0;
-    private static final int MAX_BACKTRACKS = 50000;
+    private final int maxBacktracks;
 
     @SuppressWarnings("unchecked")
     public Recto(int[][] grid) {
         this.grid = grid;
         this.rows = grid.length;
         this.cols = grid[0].length;
+        
+        this.maxBacktracks = Math.max(50000, rows * cols * 50);
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
@@ -55,6 +57,26 @@ public class Recto {
         }
 
         generatePossibleRects();
+    }
+
+    /**
+     * Maps ownership of EVERY cell within a solution rectangle.
+     * Guarantees getCellOwner(r, c) returns a valid non-negative ID for inner boundary checks.
+     */
+    public void setSolutionRect(int clueId, Rect rect) {
+        if (rect == null) return;
+        
+        if (clueId >= 0 && clueId < solution.length) {
+            solution[clueId] = rect;
+        }
+        
+        for (int r = rect.r1; r <= rect.r2; r++) {
+            for (int c = rect.c1; c <= rect.c2; c++) {
+                if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                    cellOwner[r][c] = clueId;
+                }
+            }
+        }
     }
 
     private void generatePossibleRects() {
@@ -99,7 +121,7 @@ public class Recto {
 
     private boolean backtrack(int clueIndex, boolean[][] occupied) {
         backtrackCount++;
-        if (backtrackCount > MAX_BACKTRACKS) return false;
+        if (backtrackCount > maxBacktracks) return false;
 
         if (clueIndex == clueLocations.size()) {
             for (int r = 0; r < rows; r++) {
@@ -124,6 +146,37 @@ public class Recto {
             }
         }
         return false;
+    }
+
+    public int countSolutions(int limit) {
+        backtrackCount = 0;
+        boolean[][] occupied = new boolean[rows][cols];
+        return countSolutionsBacktrack(0, occupied, 0, limit);
+    }
+
+    private int countSolutionsBacktrack(int clueIndex, boolean[][] occupied, int currentCount, int limit) {
+        backtrackCount++;
+        if (backtrackCount > maxBacktracks || currentCount >= limit) return currentCount;
+
+        if (clueIndex == clueLocations.size()) {
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    if (!occupied[r][c]) return currentCount;
+                }
+            }
+            return currentCount + 1;
+        }
+
+        for (Rect rect : possibleRectsPerClue[clueIndex]) {
+            if (canPlace(rect, occupied)) {
+                place(rect, occupied, clueIndex);
+                currentCount = countSolutionsBacktrack(clueIndex + 1, occupied, currentCount, limit);
+                remove(rect, occupied);
+
+                if (currentCount >= limit) break;
+            }
+        }
+        return currentCount;
     }
 
     private boolean canPlace(Rect rect, boolean[][] occupied) {
@@ -169,10 +222,6 @@ public class Recto {
 
     public int getRows() { return rows; }
     public int getCols() { return cols; }
-    public int getBacktrackCount() { return backtrackCount; }
-    public String getDifficultyWithDimensions() {
-        return rows + "x" + cols + " Grid";
-    }
 
     public static class Point {
         public int x, y;

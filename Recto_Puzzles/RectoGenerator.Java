@@ -4,38 +4,84 @@ import java.util.Random;
 
 public class RectoGenerator {
 
-    public static int[][] generate(int rows, int cols) {
-        return generateUnique(rows, cols);
+    public static class GenerationResult {
+        public int[][] grid;
+        public List<Recto.Rect> partitions;
+
+        public GenerationResult(int[][] grid, List<Recto.Rect> partitions) {
+            this.grid = grid;
+            this.partitions = partitions;
+        }
     }
 
-    public static int[][] generateUnique(int rows, int cols) {
-        int[][] grid = new int[rows][cols];
+    public static GenerationResult generateWithPartitions(int rows, int cols) {
         Random rand = new Random();
+        int attempts = 0;
+        int maxAttempts = (rows > 12 || cols > 12) ? 10 : 100;
 
+        int sectorSize = Math.min(6, Math.max(3, Math.min(rows, cols) / 2));
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            int[][] grid = new int[rows][cols];
+            List<Recto.Rect> allRects = new ArrayList<>();
+
+            for (int r = 0; r < rows; r += sectorSize) {
+                int rEnd = Math.min(r + sectorSize - 1, rows - 1);
+                for (int c = 0; c < cols; c += sectorSize) {
+                    int cEnd = Math.min(c + sectorSize - 1, cols - 1);
+                    allRects.addAll(generateSectorPartition(r, c, rEnd, cEnd, rand));
+                }
+            }
+
+            for (int i = 0; i < allRects.size(); i++) {
+                Recto.Rect rect = allRects.get(i);
+                rect.clueId = i;
+                int h = rect.r2 - rect.r1 + 1;
+                int w = rect.c2 - rect.c1 + 1;
+
+                int clueR = rect.r1 + rand.nextInt(h);
+                int clueC = rect.c1 + rand.nextInt(w);
+
+                grid[clueR][clueC] = h + w;
+            }
+
+            if (rows <= 12 && cols <= 12) {
+                Recto solver = new Recto(grid);
+                if (solver.countSolutions(2) == 1) {
+                    return new GenerationResult(grid, allRects);
+                }
+            } else {
+                return new GenerationResult(grid, allRects);
+            }
+        }
+
+        return generateFallbackResult(rows, cols, rand);
+    }
+
+    private static GenerationResult generateFallbackResult(int rows, int cols, Random rand) {
+        int[][] grid = new int[rows][cols];
         List<Recto.Rect> allRects = new ArrayList<>();
-        int sectorSize = 6;
 
+        int sectorSize = 4;
         for (int r = 0; r < rows; r += sectorSize) {
             int rEnd = Math.min(r + sectorSize - 1, rows - 1);
             for (int c = 0; c < cols; c += sectorSize) {
                 int cEnd = Math.min(c + sectorSize - 1, cols - 1);
-                
-                List<Recto.Rect> sectorRects = generateSectorPartition(r, c, rEnd, cEnd, rand);
-                allRects.addAll(sectorRects);
+                allRects.addAll(generateSectorPartition(r, c, rEnd, cEnd, rand));
             }
         }
 
-        for (Recto.Rect rect : allRects) {
+        for (int i = 0; i < allRects.size(); i++) {
+            Recto.Rect rect = allRects.get(i);
+            rect.clueId = i;
             int h = rect.r2 - rect.r1 + 1;
             int w = rect.c2 - rect.c1 + 1;
-            
             int clueR = rect.r1 + rand.nextInt(h);
             int clueC = rect.c1 + rand.nextInt(w);
-            
             grid[clueR][clueC] = h + w;
         }
-
-        return grid;
+        return new GenerationResult(grid, allRects);
     }
 
     private static List<Recto.Rect> generateSectorPartition(int r1, int c1, int r2, int c2, Random rand) {
@@ -53,12 +99,7 @@ public class RectoGenerator {
             return;
         }
 
-        boolean splitHorizontally;
-        if (h > 2 && w > 2) {
-            splitHorizontally = rand.nextBoolean();
-        } else {
-            splitHorizontally = (h > 2);
-        }
+        boolean splitHorizontally = (h > 2 && w > 2) ? rand.nextBoolean() : (h > 2);
 
         if (splitHorizontally && h > 2) {
             int split = r1 + 1 + rand.nextInt(h - 2);
