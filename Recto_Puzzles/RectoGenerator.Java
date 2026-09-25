@@ -113,4 +113,6 @@ public class RectoGenerator {
             result.add(new Recto.Rect(-1, r1, c1, r2, c2));
         }
     }
+
+    
 }
