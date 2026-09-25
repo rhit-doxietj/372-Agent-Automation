@@ -1,0 +1,177 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' --- Enumerations & Inner Classes ---
+
+enum GameMode {
+  CLASSIC
+  TIME_TRIAL
+  HARDCORE
+  FOG_OF_WAR
+}
+
+enum BoardSize {
+  SMALL
+  MEDIUM
+  LARGE
+  CUSTOM
+}
+
+class "Recto.Rect" as Rect {
+  + clueId : int
+  + r1 : int
+  + c1 : int
+  + r2 : int
+  + c2 : int
+  + Rect(clueId : int, r1 : int, c1 : int, r2 : int, c2 : int)
+}
+
+class "Recto.Point" as Point {
+  + x : int
+  + y : int
+  + Point(x : int, y : int)
+}
+
+class "RectoGenerator.GenerationResult" as GenerationResult {
+  + grid : int[][]
+  + partitions : List<Recto.Rect>
+  + GenerationResult(grid : int[][], partitions : List<Recto.Rect>)
+}
+
+class "RectoGUI.BoardPanel" as BoardPanel {
+  - PADDING : int
+  + BoardPanel()
+  - getRectAtCell(r : int, c : int) : Recto.Rect
+  - getCellAtPoint(p : Point) : Point
+  - validateAndPlaceRect(p1 : Point, p2 : Point) : void
+  # paintComponent(g : Graphics) : void
+}
+
+' --- Core Classes ---
+
+class Recto {
+  - grid : int[][]
+  - rows : int
+  - cols : int
+  - clueLocations : List<Point>
+  - clueValues : List<Integer>
+  - possibleRectsPerClue : List<Rect>[]
+  - solution : Rect[]
+  - cellOwner : int[][]
+  - backtrackCount : int
+  - maxBacktracks : int
+  + Recto(grid : int[][])
+  + setSolutionRect(clueId : int, rect : Rect) : void
+  - generatePossibleRects() : void
+  - containsOtherClues(currentClueId : int, r1 : int, c1 : int, r2 : int, c2 : int) : boolean
+  + solve() : boolean
+  - backtrack(clueIndex : int, occupied : boolean[][]) : boolean
+  + countSolutions(limit : int) : int
+  - countSolutionsBacktrack(clueIndex : int, occupied : boolean[][], currentCount : int, limit : int) : int
+  - canPlace(rect : Rect, occupied : boolean[][]) : boolean
+  - place(rect : Rect, occupied : boolean[][], clueId : int) : void
+  - remove(rect : Rect, occupied : boolean[][]) : void
+  + getSolutionRect(clueId : int) : Rect
+  + getCellOwner(r : int, c : int) : int
+  + getRows() : int
+  + getCols() : int
+}
+
+class RectoGenerator {
+  + {static} generateWithPartitions(rows : int, cols : int) : GenerationResult
+  - {static} generateFallbackResult(rows : int, cols : int, rand : Random) : GenerationResult
+  - {static} generateSectorPartition(r1 : int, c1 : int, r2 : int, c2 : int, rand : Random) : List<Recto.Rect>
+  - {static} subdivide(r1 : int, c1 : int, r2 : int, c2 : int, result : List<Recto.Rect>, rand : Random) : void
+}
+
+class RectoGUI {
+  - cardLayout : CardLayout
+  - mainPanel : JPanel
+  - selectedMode : GameMode
+  - selectedSize : BoardSize
+  - selectedDifficulty : String
+  - customRows : int
+  - customCols : int
+  - soundVolume : float
+  - soundMuted : boolean
+  - lives : int
+  - timerSeconds : int
+  - gameTimer : Timer
+  - grid : int[][]
+  - clueIndexMap : int[][]
+  - solver : Recto
+  - playerRects : List<Recto.Rect>
+  - revealedCells : boolean[][]
+  - isGameOver : boolean
+  - showSolutionOverlay : boolean
+  - dragStart : Point
+  - dragEnd : Point
+  - errorRect : Recto.Rect
+  - errorTimer : Timer
+  - timerLabel : JLabel
+  - livesLabel : JLabel
+  - gameOverBar : JPanel
+  - showSolutionBtn : JButton
+  - boardPanel : BoardPanel
+  + RectoGUI()
+  - createHomeScreen() : JPanel
+  - showRulesDialog() : void
+  - createGameModeScreen() : JPanel
+  - createModeCard(title : String, desc : String, bg : Color) : JButton
+  - selectMode(mode : GameMode) : void
+  - createPuzzleSetupScreen() : JPanel
+  - createSettingsScreen() : JPanel
+  - createGamePlayScreen() : JPanel
+  - startNewGame() : void
+  - revealAroundCell(cr : int, cc : int, radius : int) : void
+  - updateFogOfWar(placed : Recto.Rect) : void
+  - handleTimerTick() : void
+  - updateTimerDisplay() : void
+  - triggerGameOver() : void
+  - checkVictoryCondition() : void
+  - playSound(isCorrect : boolean) : void
+  - styleButton(btn : JButton, bg : Color) : void
+  + {static} main(args : String[]) : void
+}
+
+class RectoTest {
+  - {static} passedCount : int
+  - {static} failedCount : int
+  - {static} failures : List<String>
+  + {static} main(args : String[]) : void
+  - {static} runTestCase(testName : String, puzzle : int[][], expectedSolvable : boolean) : void
+  - {static} printSolutionGrid(solver : Recto) : void
+}
+
+' --- Inner / Nested Class Relationships ---
+
+Recto +-- Rect[cite: 5]
+Recto +-- Point[cite: 5]
+RectoGenerator +-- GenerationResult[cite: 6]
+RectoGUI +-- GameMode[cite: 7]
+RectoGUI +-- BoardSize[cite: 7]
+RectoGUI +-- BoardPanel[cite: 7]
+
+' --- Composition & Association Relationships ---
+
+Recto "1" *-- "0..*" Point : clueLocations[cite: 5]
+Recto "1" *-- "0..*" Rect : solution[cite: 5]
+Recto "1" *-- "0..*" Rect : possibleRectsPerClue[cite: 5]
+
+GenerationResult "1" o-- "0..*" Rect : partitions[cite: 6]
+
+RectoGenerator ..> GenerationResult : creates[cite: 6]
+RectoGenerator ..> Recto : uses solver to validate[cite: 6]
+
+RectoGUI "1" o-- "1" Recto : solver[cite: 7]
+RectoGUI "1" o-- "0..*" Rect : playerRects[cite: 7]
+RectoGUI "1" o-- "0..1" Rect : errorRect[cite: 7]
+RectoGUI "1" o-- "1" BoardPanel : boardPanel[cite: 7]
+RectoGUI "1" o-- "1" GameMode : selectedMode[cite: 7]
+RectoGUI "1" o-- "1" BoardSize : selectedSize[cite: 7]
+RectoGUI ..> RectoGenerator : generates boards via[cite: 7]
+
+RectoTest ..> Recto : tests[cite: 8]
+RectoTest ..> RectoGenerator : tests[cite: 8]
+
+@uml
