@@ -8,6 +8,11 @@ public class KaminoPuzzleTest {
     private static int totalFailed = 0;
 
     private static void displayBoard(String[][] grid, List<KaminoPuzzleSolver.Point> path) {
+        if (grid.length > 10 || grid[0].length > 10) {
+            System.out.println("[Board display omitted for large size: " + grid.length + "x" + grid[0].length + "]");
+            return;
+        }
+
         for (int r = 0; r < grid.length; r++) {
             for (int c = 0; c < grid[0].length; c++) {
                 KaminoPuzzleSolver.Point p = new KaminoPuzzleSolver.Point(r, c);
@@ -33,19 +38,25 @@ public class KaminoPuzzleTest {
         System.out.println("End Position   (E): " + solver.getTargetPos());
         System.out.println("Is Start > Halfway from End? " + (solver.isStartMoreThanHalfway() ? "YES" : "NO"));
 
+        long startTime = System.currentTimeMillis();
         List<KaminoPuzzleSolver.Point> path = solver.solve();
+        long elapsed = System.currentTimeMillis() - startTime;
 
         System.out.println("\nBoard Layout (* marks path):");
         displayBoard(grid, path);
 
         if (path != null) {
-            System.out.println("\nPath Found (" + (path.size() - 1) + " moves):");
-            for (int i = 0; i < path.size(); i++) {
-                System.out.print(path.get(i));
-                if (i < path.size() - 1) System.out.print(" -> ");
-                if ((i + 1) % 6 == 0) System.out.println();
+            System.out.println("\nPath Found (" + (path.size() - 1) + " moves in " + elapsed + "ms):");
+            if (path.size() <= 25) {
+                for (int i = 0; i < path.size(); i++) {
+                    System.out.print(path.get(i));
+                    if (i < path.size() - 1) System.out.print(" -> ");
+                    if ((i + 1) % 6 == 0) System.out.println();
+                }
+                System.out.println();
+            } else {
+                System.out.println(path.get(0) + " -> ... -> " + path.get(path.size() - 1) + " [truncated " + path.size() + " points]");
             }
-            System.out.println();
 
             if (expectSuccess) {
                 System.out.println("TEST RESULT: PASSED (Path found as expected)\n");
@@ -56,7 +67,7 @@ public class KaminoPuzzleTest {
             }
         } else {
             if (!expectSuccess) {
-                System.out.println("\nNo path found.");
+                System.out.println("\nNo path found (solved in " + elapsed + "ms).");
                 System.out.println("TEST RESULT: PASSED (Correctly identified as unsolvable)\n");
                 totalPassed++;
             } else {
@@ -68,10 +79,10 @@ public class KaminoPuzzleTest {
     }
 
     public static void main(String[] args) {
-        System.out.println("Running Kamino Test Suite (Sizes 5x5 to 10x10)...\n");
+        System.out.println("Running Kamino Comprehensive Test Suite...\n");
 
         // ====================================================
-        // 5x5 GRIDS
+        // PART 1: STATIC TESTS (Sizes 5x5 to 10x10)
         // ====================================================
         String[][] solvable5x5 = {
             { "9",   "8",   "7",   "6",   "S"   },
@@ -89,115 +100,8 @@ public class KaminoPuzzleTest {
             { "1",   "1",   "1",   "1",   "1"   },
             { "E:9", "1",   "1",   "1",   "1"   }
         };
-        runTest("5x5 - UNSOLVABLE (Walled-in Target)", unsolvable5x5, false);
+        runTest("5x5 - UNSOLVABLE", unsolvable5x5, false);
 
-        // ====================================================
-        // 6x6 GRIDS
-        // ====================================================
-        String[][] solvable6x6 = {
-            { "9",   "8",   "7",   "6",   "5",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "8"   },
-            { "7",   "6",   "5",   "4",   "3",   "6"   },
-            { "6",   "5",   "4",   "3",   "2",   "4"   },
-            { "5",   "2",   "2",   "2",   "2",   "2"   },
-            { "4",   "E:1", "3",   "4",   "5",   "6"   }
-        };
-        runTest("6x6 - SOLVABLE", solvable6x6, true);
-
-        String[][] unsolvable6x6 = {
-            { "9",   "8",   "7",   "6",   "5",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "3"   },
-            { "9",   "9",   "9",   "9",   "9",   "9"   },
-            { "1",   "2",   "3",   "4",   "5",   "6"   },
-            { "2",   "3",   "4",   "5",   "6",   "7"   },
-            { "E:2", "3",   "4",   "5",   "6",   "7"   }
-        };
-        runTest("6x6 - UNSOLVABLE (Horizontal Monotonic Barrier)", unsolvable6x6, false);
-
-        // ====================================================
-        // 7x7 GRIDS
-        // ====================================================
-        String[][] solvable7x7 = {
-            { "9",   "8",   "7",   "6",   "5",   "4",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "3",   "8"   },
-            { "7",   "6",   "5",   "4",   "3",   "2",   "7"   },
-            { "6",   "5",   "4",   "3",   "2",   "1",   "6"   },
-            { "5",   "4",   "3",   "2",   "1",   "9",   "5"   },
-            { "3",   "4",   "4",   "4",   "4",   "4",   "4"   },
-            { "E:2", "2",   "3",   "4",   "5",   "6",   "7"   }
-        };
-        runTest("7x7 - SOLVABLE", solvable7x7, true);
-
-        String[][] unsolvable7x7 = {
-            { "9",   "8",   "7",   "6",   "5",   "1",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "3",   "9"   },
-            { "7",   "6",   "5",   "4",   "3",   "2",   "9"   },
-            { "6",   "5",   "4",   "3",   "2",   "1",   "9"   },
-            { "5",   "4",   "3",   "2",   "1",   "9",   "9"   },
-            { "4",   "3",   "2",   "1",   "9",   "8",   "9"   },
-            { "E:2", "2",   "3",   "4",   "5",   "6",   "7"   }
-        };
-        runTest("7x7 - UNSOLVABLE (Trapped Start Node)", unsolvable7x7, false);
-
-        // ====================================================
-        // 8x8 GRIDS
-        // ====================================================
-        String[][] solvable8x8 = {
-            { "9",   "8",   "7",   "6",   "5",   "4",   "3",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "3",   "2",   "8"   },
-            { "7",   "6",   "5",   "4",   "3",   "2",   "1",   "7"   },
-            { "6",   "5",   "4",   "3",   "2",   "1",   "9",   "6"   },
-            { "5",   "4",   "5",   "5",   "5",   "5",   "5",   "5"   },
-            { "4",   "3",   "4",   "3",   "9",   "8",   "7",   "6"   },
-            { "3",   "2",   "3",   "2",   "9",   "8",   "7",   "6"   },
-            { "E:2", "2",   "2",   "7",   "6",   "5",   "4",   "3"   }
-        };
-        runTest("8x8 - SOLVABLE", solvable8x8, true);
-
-        String[][] unsolvable8x8 = {
-            { "1",   "2",   "3",   "4",   "5",   "6",   "7",   "S"   },
-            { "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9"   },
-            { "3",   "4",   "5",   "6",   "7",   "8",   "9",   "1"   },
-            { "4",   "5",   "6",   "7",   "8",   "9",   "1",   "2"   },
-            { "5",   "6",   "7",   "8",   "9",   "1",   "2",   "3"   },
-            { "6",   "7",   "8",   "9",   "1",   "2",   "3",   "4"   },
-            { "7",   "8",   "9",   "1",   "2",   "3",   "4",   "5"   },
-            { "E:1", "9",   "1",   "2",   "3",   "4",   "5",   "6"   }
-        };
-        runTest("8x8 - UNSOLVABLE (Fully Inverted Gradient)", unsolvable8x8, false);
-
-        // ====================================================
-        // 9x9 GRIDS
-        // ====================================================
-        String[][] solvable9x9 = {
-            { "9",   "8",   "7",   "6",   "5",   "4",   "3",   "2",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "3",   "2",   "1",   "9"   },
-            { "7",   "6",   "5",   "4",   "3",   "2",   "1",   "9",   "8"   },
-            { "6",   "5",   "4",   "3",   "2",   "1",   "9",   "8",   "7"   },
-            { "5",   "4",   "6",   "6",   "6",   "6",   "6",   "6",   "6"   },
-            { "4",   "3",   "5",   "1",   "2",   "3",   "4",   "5",   "6"   },
-            { "3",   "2",   "4",   "1",   "2",   "3",   "4",   "5",   "6"   },
-            { "2",   "1",   "3",   "1",   "2",   "3",   "4",   "5",   "6"   },
-            { "E:2", "2",   "2",   "9",   "8",   "7",   "6",   "5",   "4"   }
-        };
-        runTest("9x9 - SOLVABLE", solvable9x9, true);
-
-        String[][] unsolvable9x9 = {
-            { "9",   "8",   "7",   "6",   "5",   "4",   "3",   "2",   "S"   },
-            { "8",   "7",   "6",   "5",   "4",   "3",   "2",   "1",   "9"   },
-            { "7",   "6",   "5",   "4",   "3",   "2",   "1",   "9",   "8"   },
-            { "6",   "5",   "4",   "3",   "2",   "1",   "9",   "8",   "7"   },
-            { "5",   "4",   "3",   "2",   "1",   "9",   "8",   "7",   "6"   },
-            { "4",   "3",   "2",   "1",   "9",   "8",   "7",   "6",   "5"   },
-            { "3",   "2",   "1",   "9",   "8",   "7",   "6",   "5",   "4"   },
-            { "9",   "9",   "9",   "9",   "9",   "9",   "9",   "9",   "9"   },
-            { "E:1", "9",   "1",   "2",   "3",   "4",   "5",   "6",   "7"   }
-        };
-        runTest("9x9 - UNSOLVABLE (Impassable Final Wall)", unsolvable9x9, false);
-
-        // ====================================================
-        // 10x10 GRIDS
-        // ====================================================
         String[][] solvable10x10 = {
             { "9",   "8",   "7",   "6",   "5",   "4",   "3",   "2",   "1",   "S"   },
             { "8",   "7",   "6",   "5",   "4",   "3",   "2",   "1",   "9",   "9"   },
@@ -212,19 +116,36 @@ public class KaminoPuzzleTest {
         };
         runTest("10x10 - SOLVABLE", solvable10x10, true);
 
-        String[][] unsolvable10x10 = {
-            { "1",   "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9",   "S"   },
-            { "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9",   "1",   "2"   },
-            { "3",   "4",   "5",   "6",   "7",   "8",   "9",   "1",   "2",   "3"   },
-            { "4",   "5",   "6",   "7",   "8",   "9",   "1",   "2",   "3",   "4"   },
-            { "5",   "6",   "7",   "8",   "9",   "1",   "2",   "3",   "4",   "5"   },
-            { "6",   "7",   "8",   "9",   "1",   "2",   "3",   "4",   "5",   "6"   },
-            { "7",   "8",   "9",   "1",   "2",   "3",   "4",   "5",   "6",   "7"   },
-            { "8",   "9",   "1",   "2",   "3",   "4",   "5",   "6",   "7",   "8"   },
-            { "9",   "1",   "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9"   },
-            { "E:1", "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9",   "1"   }
-        };
-        runTest("10x10 - UNSOLVABLE (Zero Horizontal Bridges)", unsolvable10x10, false);
+        // ====================================================
+        // PART 2: DYNAMIC GENERATOR TESTS (Sizes 3 to 75)
+        // ====================================================
+        System.out.println("==================================================");
+        System.out.println("      AUTOMATED PUZZLE GENERATOR TESTS            ");
+        System.out.println("==================================================");
+
+        // Test 1: Small board (3x3)
+        String[][] gen3x3 = KaminoPuzzleGenerator.generate(3);
+        runTest("Generated 3x3 (Smallest Halfway Board)", gen3x3, true);
+
+        // Test 2: Medium board (8x8)
+        String[][] gen8x8 = KaminoPuzzleGenerator.generate(8);
+        runTest("Generated 8x8 Solvable", gen8x8, true);
+
+        // Test 3: Large board (20x20)
+        String[][] gen20x20 = KaminoPuzzleGenerator.generate(20);
+        runTest("Generated 20x20 Solvable", gen20x20, true);
+
+        // Test 4: Extra large board (50x50)
+        String[][] gen50x50 = KaminoPuzzleGenerator.generate(50);
+        runTest("Generated 50x50 Solvable", gen50x50, true);
+
+        // Test 5: Maximum size board (75x75 Solvable)
+        String[][] gen75x75 = KaminoPuzzleGenerator.generate(75);
+        runTest("Generated 75x75 Solvable (Max Spec)", gen75x75, true);
+
+        // Test 6: Maximum size board (75x75 Unsolvable)
+        String[][] gen75x75Unsolvable = KaminoPuzzleGenerator.generate(75, false);
+        runTest("Generated 75x75 Unsolvable (Max Spec)", gen75x75Unsolvable, false);
 
         // ====================================================
         // FINAL SUMMARY REPORT
