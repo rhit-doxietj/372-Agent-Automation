@@ -62,7 +62,7 @@ public class KaminoGUI extends JFrame {
     private static final Color TEXT_LIGHT = new Color(230, 235, 245);
 
     public KaminoGUI() {
-        setTitle("Kamino Puzzle Game");
+        setTitle("Kamino.IO");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1150, 860);
         setMinimumSize(new Dimension(750, 650));
@@ -91,7 +91,7 @@ public class KaminoGUI extends JFrame {
         gbc.gridx = 0;
         gbc.insets = new Insets(10, 15, 10, 15);
 
-        JLabel titleLabel = new JLabel("KAMINO");
+        JLabel titleLabel = new JLabel("KAMINO.IO");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 75));
         titleLabel.setForeground(ACCENT_BLUE);
         gbc.gridy = 0;
