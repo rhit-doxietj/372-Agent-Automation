@@ -1,12 +1,12 @@
 package Kamino_Puzzles;
 
+import PuzzleHub_Shared.Point;
+import PuzzleHub_Shared.UIUtils;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.SourceDataLine;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
@@ -16,51 +16,40 @@ public class KaminoGUI extends JFrame {
     private JPanel mainContainer;
     private Runnable onReturnToHub;
 
-    // Game Mode State
     public enum GameMode { SOLO, RACE }
     private GameMode currentMode = GameMode.SOLO;
 
-    // Customization State
     private int selectedSize = 7;
 
-    // Player Board State
     private String[][] playerGrid;
-    private KaminoPuzzleSolver.Point playerStartPoint;
-    private KaminoPuzzleSolver.Point playerEndPoint;
+    private Point playerStartPoint;
+    private Point playerEndPoint;
     private int playerEndValue;
-    private List<KaminoPuzzleSolver.Point> playerPath = new ArrayList<>();
-    private List<KaminoPuzzleSolver.Point> animatedFlowPath = new ArrayList<>();
+    private List<Point> playerPath = new ArrayList<>();
+    private List<Point> animatedFlowPath = new ArrayList<>();
     private boolean isAnimatingFlow = false;
     private BoardCanvas playerBoardCanvas;
-    private KaminoPuzzleSolver.Point flashRedPoint = null;
+    private Point flashRedPoint = null;
     private javax.swing.Timer flashTimer;
 
-    // Ghost Board State (Race Mode)
     private String[][] ghostGrid;
-    private KaminoPuzzleSolver.Point ghostStartPoint;
-    private KaminoPuzzleSolver.Point ghostEndPoint;
+    private Point ghostStartPoint;
+    private Point ghostEndPoint;
     private int ghostEndValue;
-    private List<KaminoPuzzleSolver.Point> ghostOptimalPath = new ArrayList<>();
-    private List<KaminoPuzzleSolver.Point> ghostCurrentPath = new ArrayList<>();
+    private List<Point> ghostOptimalPath = new ArrayList<>();
+    private List<Point> ghostCurrentPath = new ArrayList<>();
     private BoardCanvas ghostBoardCanvas;
     private javax.swing.Timer ghostStepTimer;
     private int ghostStepIndex = 0;
 
-    // UI Panels & Labels
     private JPanel boardsContainer;
     private JLabel statusLabel;
     private JLabel raceProgressLabel;
 
-    // Palette Colors
-    private static final Color BG_DARK = new Color(24, 26, 31);
-    private static final Color PANEL_BG = new Color(33, 37, 43);
-    private static final Color ACCENT_BLUE = new Color(74, 144, 226);
-    private static final Color ACCENT_PURPLE = new Color(171, 71, 188);
     private static final Color PATH_GREEN = new Color(76, 175, 80);
     private static final Color TARGET_YELLOW = new Color(255, 214, 0);
     private static final Color ERROR_RED = new Color(239, 83, 80);
     private static final Color TILE_DEFAULT = new Color(44, 49, 58);
-    private static final Color TEXT_LIGHT = new Color(230, 235, 245);
 
     public KaminoGUI() {
         this(null);
@@ -86,12 +75,9 @@ public class KaminoGUI extends JFrame {
         cardLayout.show(mainContainer, "HOME");
     }
 
-    // ==========================================================
-    // 1. HOME SCREEN
-    // ==========================================================
     private JPanel createHomeScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(BG_DARK);
+        panel.setBackground(UIUtils.BG_DARK);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -99,18 +85,17 @@ public class KaminoGUI extends JFrame {
 
         JLabel titleLabel = new JLabel("KAMINO.IO");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 75));
-        titleLabel.setForeground(ACCENT_BLUE);
+        titleLabel.setForeground(UIUtils.ACCENT_BLUE);
         gbc.gridy = 0;
         panel.add(titleLabel, gbc);
 
         JLabel subtitleLabel = new JLabel("A Numerical Gradient Pathfinding Game");
         subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 18));
-        subtitleLabel.setForeground(TEXT_LIGHT);
+        subtitleLabel.setForeground(UIUtils.TEXT_LIGHT);
         gbc.gridy = 1;
         panel.add(subtitleLabel, gbc);
 
-        // Mode: Solo
-        JButton soloBtn = createStyledButton("SOLO PLAY", 240, 48, ACCENT_BLUE);
+        JButton soloBtn = UIUtils.createStyledButton("SOLO PLAY", 240, 48, UIUtils.ACCENT_BLUE);
         soloBtn.addActionListener(e -> {
             currentMode = GameMode.SOLO;
             cardLayout.show(mainContainer, "CUSTOMIZE");
@@ -119,8 +104,7 @@ public class KaminoGUI extends JFrame {
         gbc.insets = new Insets(30, 15, 10, 15);
         panel.add(soloBtn, gbc);
 
-        // Mode: Race the Solver
-        JButton raceBtn = createStyledButton("RACE THE SOLVER", 240, 48, ACCENT_PURPLE);
+        JButton raceBtn = UIUtils.createStyledButton("RACE THE SOLVER", 240, 48, UIUtils.ACCENT_PURPLE);
         raceBtn.addActionListener(e -> {
             currentMode = GameMode.RACE;
             cardLayout.show(mainContainer, "CUSTOMIZE");
@@ -129,15 +113,13 @@ public class KaminoGUI extends JFrame {
         gbc.insets = new Insets(10, 15, 10, 15);
         panel.add(raceBtn, gbc);
 
-        // Rules
-        JButton rulesBtn = createStyledButton("RULES", 240, 48, new Color(90, 100, 115));
+        JButton rulesBtn = UIUtils.createStyledButton("RULES", 240, 48, new Color(90, 100, 115));
         rulesBtn.addActionListener(e -> cardLayout.show(mainContainer, "RULES"));
         gbc.gridy = 4;
         panel.add(rulesBtn, gbc);
 
-        // Return to Hub Button if launched from GameLauncher
         if (onReturnToHub != null) {
-            JButton hubBtn = createStyledButton("BACK TO HUB", 240, 40, new Color(70, 75, 85));
+            JButton hubBtn = UIUtils.createStyledButton("BACK TO HUB", 240, 40, new Color(70, 75, 85));
             hubBtn.addActionListener(e -> {
                 dispose();
                 onReturnToHub.run();
@@ -149,12 +131,9 @@ public class KaminoGUI extends JFrame {
         return panel;
     }
 
-    // ==========================================================
-    // 2. RULES SCREEN
-    // ==========================================================
     private JPanel createRulesScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(BG_DARK);
+        panel.setBackground(UIUtils.BG_DARK);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -162,12 +141,12 @@ public class KaminoGUI extends JFrame {
 
         JLabel header = new JLabel("HOW TO PLAY");
         header.setFont(new Font("SansSerif", Font.BOLD, 38));
-        header.setForeground(TEXT_LIGHT);
+        header.setForeground(UIUtils.TEXT_LIGHT);
         gbc.gridy = 0;
         panel.add(header, gbc);
 
         JPanel contentBox = new JPanel(new GridLayout(6, 1, 10, 14));
-        contentBox.setBackground(PANEL_BG);
+        contentBox.setBackground(UIUtils.PANEL_BG);
         contentBox.setBorder(new EmptyBorder(25, 35, 25, 35));
 
         contentBox.add(createRuleLine("1. Goal", "Navigate from START to the Yellow TARGET square."));
@@ -180,7 +159,7 @@ public class KaminoGUI extends JFrame {
         gbc.gridy = 1;
         panel.add(contentBox, gbc);
 
-        JButton backBtn = createStyledButton("Back to Menu", 180, 45, ACCENT_BLUE);
+        JButton backBtn = UIUtils.createStyledButton("Back to Menu", 180, 45, UIUtils.ACCENT_BLUE);
         backBtn.addActionListener(e -> cardLayout.show(mainContainer, "HOME"));
         gbc.gridy = 2;
         panel.add(backBtn, gbc);
@@ -194,24 +173,21 @@ public class KaminoGUI extends JFrame {
 
         JLabel titleLbl = new JLabel(title);
         titleLbl.setFont(new Font("SansSerif", Font.BOLD, 16));
-        titleLbl.setForeground(ACCENT_BLUE);
+        titleLbl.setForeground(UIUtils.ACCENT_BLUE);
         titleLbl.setPreferredSize(new Dimension(190, 24));
 
         JLabel descLbl = new JLabel(desc);
         descLbl.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        descLbl.setForeground(TEXT_LIGHT);
+        descLbl.setForeground(UIUtils.TEXT_LIGHT);
 
         line.add(titleLbl, BorderLayout.WEST);
         line.add(descLbl, BorderLayout.CENTER);
         return line;
     }
 
-    // ==========================================================
-    // 3. CUSTOMIZATION SCREEN
-    // ==========================================================
     private JPanel createCustomizationScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(BG_DARK);
+        panel.setBackground(UIUtils.BG_DARK);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -219,22 +195,22 @@ public class KaminoGUI extends JFrame {
 
         JLabel headerLabel = new JLabel("Game Setup");
         headerLabel.setFont(new Font("SansSerif", Font.BOLD, 36));
-        headerLabel.setForeground(TEXT_LIGHT);
+        headerLabel.setForeground(UIUtils.TEXT_LIGHT);
         gbc.gridy = 0;
         panel.add(headerLabel, gbc);
 
         JPanel settingsBox = new JPanel(new GridLayout(3, 1, 10, 15));
-        settingsBox.setBackground(PANEL_BG);
+        settingsBox.setBackground(UIUtils.PANEL_BG);
         settingsBox.setBorder(new EmptyBorder(25, 35, 25, 35));
 
         JLabel sizeLabel = new JLabel("Board Dimension: 7 x 7", SwingConstants.CENTER);
         sizeLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
-        sizeLabel.setForeground(TEXT_LIGHT);
+        sizeLabel.setForeground(UIUtils.TEXT_LIGHT);
         settingsBox.add(sizeLabel);
 
         JSlider sizeSlider = new JSlider(2, 75, selectedSize);
-        sizeSlider.setBackground(PANEL_BG);
-        sizeSlider.setForeground(TEXT_LIGHT);
+        sizeSlider.setBackground(UIUtils.PANEL_BG);
+        sizeSlider.setForeground(UIUtils.TEXT_LIGHT);
         sizeSlider.setMajorTickSpacing(15);
         sizeSlider.setMinorTickSpacing(5);
         sizeSlider.setPaintTicks(true);
@@ -257,11 +233,11 @@ public class KaminoGUI extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         btnPanel.setOpaque(false);
 
-        JButton backBtn = createStyledButton("Back", 140, 45, new Color(90, 98, 110));
+        JButton backBtn = UIUtils.createStyledButton("Back", 140, 45, new Color(90, 98, 110));
         backBtn.addActionListener(e -> cardLayout.show(mainContainer, "HOME"));
         btnPanel.add(backBtn);
 
-        JButton startBtn = createStyledButton("Start Game", 180, 45, ACCENT_BLUE);
+        JButton startBtn = UIUtils.createStyledButton("Start Game", 180, 45, UIUtils.ACCENT_BLUE);
         startBtn.addActionListener(e -> startNewGame(selectedSize));
         btnPanel.add(startBtn);
 
@@ -271,16 +247,12 @@ public class KaminoGUI extends JFrame {
         return panel;
     }
 
-    // ==========================================================
-    // 4. GAME SCREEN WRAPPER
-    // ==========================================================
     private JPanel createGameScreenWrapper() {
         JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(BG_DARK);
+        wrapper.setBackground(UIUtils.BG_DARK);
 
-        // Header Top Bar
         JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setBackground(PANEL_BG);
+        topBar.setBackground(UIUtils.PANEL_BG);
         topBar.setBorder(new EmptyBorder(12, 20, 12, 20));
 
         JPanel labelGroup = new JPanel(new GridLayout(2, 1, 0, 4));
@@ -288,7 +260,7 @@ public class KaminoGUI extends JFrame {
 
         statusLabel = new JLabel("Start your path from START");
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, 17));
-        statusLabel.setForeground(TEXT_LIGHT);
+        statusLabel.setForeground(UIUtils.TEXT_LIGHT);
         labelGroup.add(statusLabel);
 
         raceProgressLabel = new JLabel("");
@@ -301,13 +273,13 @@ public class KaminoGUI extends JFrame {
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         controls.setOpaque(false);
 
-        JButton resetPathBtn = createStyledButton("Clear Path", 120, 35, new Color(100, 110, 120));
+        JButton resetPathBtn = UIUtils.createStyledButton("Clear Path", 120, 35, new Color(100, 110, 120));
         resetPathBtn.addActionListener(e -> {
             if (!isAnimatingFlow) resetPlayerPath();
         });
         controls.add(resetPathBtn);
 
-        JButton menuBtn = createStyledButton("Menu", 90, 35, new Color(70, 75, 85));
+        JButton menuBtn = UIUtils.createStyledButton("Menu", 90, 35, new Color(70, 75, 85));
         menuBtn.addActionListener(e -> {
             stopGhostTimer();
             if (onReturnToHub != null) {
@@ -323,7 +295,7 @@ public class KaminoGUI extends JFrame {
         wrapper.add(topBar, BorderLayout.NORTH);
 
         boardsContainer = new JPanel(new BorderLayout());
-        boardsContainer.setBackground(BG_DARK);
+        boardsContainer.setBackground(UIUtils.BG_DARK);
         wrapper.add(boardsContainer, BorderLayout.CENTER);
 
         return wrapper;
@@ -340,9 +312,9 @@ public class KaminoGUI extends JFrame {
             for (int c = 0; c < size; c++) {
                 String token = playerGrid[r][c].trim().toUpperCase();
                 if (token.equals("S")) {
-                    playerStartPoint = new KaminoPuzzleSolver.Point(r, c);
+                    playerStartPoint = new Point(r, c);
                 } else if (token.startsWith("E:") || token.equals("E")) {
-                    playerEndPoint = new KaminoPuzzleSolver.Point(r, c);
+                    playerEndPoint = new Point(r, c);
                     playerEndValue = token.startsWith("E:") ? Integer.parseInt(token.substring(2)) : 2;
                 }
             }
@@ -364,9 +336,9 @@ public class KaminoGUI extends JFrame {
                 for (int c = 0; c < size; c++) {
                     String token = ghostGrid[r][c].trim().toUpperCase();
                     if (token.equals("S")) {
-                        ghostStartPoint = new KaminoPuzzleSolver.Point(r, c);
+                        ghostStartPoint = new Point(r, c);
                     } else if (token.startsWith("E:") || token.equals("E")) {
-                        ghostEndPoint = new KaminoPuzzleSolver.Point(r, c);
+                        ghostEndPoint = new Point(r, c);
                         ghostEndValue = token.startsWith("E:") ? Integer.parseInt(token.substring(2)) : 2;
                     }
                 }
@@ -382,11 +354,11 @@ public class KaminoGUI extends JFrame {
             ghostBoardCanvas = new BoardCanvas(true);
             JScrollPane ghostScroll = createScrollPane(ghostBoardCanvas);
 
-            JPanel leftWrapper = createBoardCard("YOUR BOARD", playerScroll, ACCENT_BLUE);
-            JPanel rightWrapper = createBoardCard("GHOST SOLVER (AI)", ghostScroll, ACCENT_PURPLE);
+            JPanel leftWrapper = createBoardCard("YOUR BOARD", playerScroll, UIUtils.ACCENT_BLUE);
+            JPanel rightWrapper = createBoardCard("GHOST SOLVER (AI)", ghostScroll, UIUtils.ACCENT_PURPLE);
 
             JPanel splitPanel = new JPanel(new GridLayout(1, 2, 12, 0));
-            splitPanel.setBackground(BG_DARK);
+            splitPanel.setBackground(UIUtils.BG_DARK);
             splitPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
             splitPanel.add(leftWrapper);
             splitPanel.add(rightWrapper);
@@ -403,7 +375,7 @@ public class KaminoGUI extends JFrame {
 
     private JPanel createBoardCard(String title, JScrollPane scroll, Color titleColor) {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(PANEL_BG);
+        panel.setBackground(UIUtils.PANEL_BG);
         panel.setBorder(BorderFactory.createLineBorder(new Color(50, 56, 68), 1));
 
         JLabel titleLbl = new JLabel(title, SwingConstants.CENTER);
@@ -495,61 +467,6 @@ public class KaminoGUI extends JFrame {
         });
     }
 
-    private void playErrorSound() {
-        new Thread(() -> {
-            try {
-                int sampleRate = 16000;
-                int pulseDurationMs = 110;
-                int gapDurationMs = 45;
-
-                int pulseSamples = (sampleRate * pulseDurationMs) / 1000;
-                int gapSamples = (sampleRate * gapDurationMs) / 1000;
-                int totalSamples = (pulseSamples * 2) + gapSamples;
-
-                byte[] buffer = new byte[totalSamples];
-                double f1 = 165.0;
-                double f2 = 233.0;
-
-                int idx = 0;
-                for (int pulse = 0; pulse < 2; pulse++) {
-                    for (int i = 0; i < pulseSamples; i++) {
-                        double t = (double) i / sampleRate;
-                        double wave = Math.sin(2.0 * Math.PI * f1 * t)
-                                    + 0.5 * Math.sin(2.0 * Math.PI * (f1 * 3) * t)
-                                    + Math.sin(2.0 * Math.PI * f2 * t)
-                                    + 0.5 * Math.sin(2.0 * Math.PI * (f2 * 3) * t);
-
-                        double saturated = Math.max(-1.0, Math.min(1.0, wave * 1.8));
-
-                        double envelope = 1.0;
-                        int ramp = sampleRate / 100;
-                        if (i < ramp) {
-                            envelope = (double) i / ramp;
-                        } else if (i > pulseSamples - ramp) {
-                            envelope = (double) (pulseSamples - i) / ramp;
-                        }
-
-                        buffer[idx++] = (byte) (saturated * envelope * 95);
-                    }
-
-                    if (pulse == 0) {
-                        for (int i = 0; i < gapSamples; i++) {
-                            buffer[idx++] = 0;
-                        }
-                    }
-                }
-
-                AudioFormat format = new AudioFormat((float) sampleRate, 8, 1, true, false);
-                SourceDataLine line = AudioSystem.getSourceDataLine(format);
-                line.open(format, totalSamples);
-                line.start();
-                line.write(buffer, 0, buffer.length);
-                line.drain();
-                line.close();
-            } catch (Exception ignored) {}
-        }).start();
-    }
-
     private Integer getTileNumericValue(String[][] grid, int r, int c) {
         String token = grid[r][c].trim().toUpperCase();
         if (token.equals("S")) return null;
@@ -561,9 +478,9 @@ public class KaminoGUI extends JFrame {
     private void attemptMoveTo(int r, int c) {
         if (isAnimatingFlow) return;
         if (r < 0 || r >= selectedSize || c < 0 || c >= selectedSize) return;
-        KaminoPuzzleSolver.Point target = new KaminoPuzzleSolver.Point(r, c);
+        Point target = new Point(r, c);
 
-        KaminoPuzzleSolver.Point currentHead = playerPath.get(playerPath.size() - 1);
+        Point currentHead = playerPath.get(playerPath.size() - 1);
         if (currentHead.equals(target)) return;
 
         if (playerPath.size() > 1 && playerPath.get(playerPath.size() - 2).equals(target)) {
@@ -609,8 +526,8 @@ public class KaminoGUI extends JFrame {
         }
     }
 
-    private void triggerIllegalMove(KaminoPuzzleSolver.Point pt) {
-        playErrorSound();
+    private void triggerIllegalMove(Point pt) {
+        UIUtils.playTone(180.0, 110, 0.8f);
         flashRedPoint = pt;
         playerBoardCanvas.repaint();
 
@@ -629,7 +546,7 @@ public class KaminoGUI extends JFrame {
         isAnimatingFlow = true;
         statusLabel.setText("YOU REACHED THE GOAL! Verifying route...");
 
-        final List<KaminoPuzzleSolver.Point> fullSolution = new ArrayList<>(playerPath);
+        final List<Point> fullSolution = new ArrayList<>(playerPath);
 
         playerPath.clear();
         animatedFlowPath.clear();
@@ -695,7 +612,7 @@ public class KaminoGUI extends JFrame {
 
         public BoardCanvas(boolean isGhost) {
             this.isGhost = isGhost;
-            setBackground(BG_DARK);
+            setBackground(UIUtils.BG_DARK);
 
             if (!isGhost) {
                 MouseAdapter mouseHandler = new MouseAdapter() {
@@ -762,25 +679,25 @@ public class KaminoGUI extends JFrame {
             int startX = Math.max(20, (getWidth() - (cellSize * selectedSize)) / 2);
             int startY = Math.max(20, (getHeight() - (cellSize * selectedSize)) / 2);
 
-            List<KaminoPuzzleSolver.Point> activePath = isGhost
+            List<Point> activePath = isGhost
                     ? ghostCurrentPath
                     : (isAnimatingFlow ? animatedFlowPath : playerPath);
-            Set<KaminoPuzzleSolver.Point> pathSet = new HashSet<>(activePath);
+            Set<Point> pathSet = new HashSet<>(activePath);
 
-            KaminoPuzzleSolver.Point sPoint = isGhost ? ghostStartPoint : playerStartPoint;
-            KaminoPuzzleSolver.Point ePoint = isGhost ? ghostEndPoint : playerEndPoint;
+            Point sPoint = isGhost ? ghostStartPoint : playerStartPoint;
+            Point ePoint = isGhost ? ghostEndPoint : playerEndPoint;
             int eVal = isGhost ? ghostEndValue : playerEndValue;
 
             for (int r = 0; r < selectedSize; r++) {
                 for (int c = 0; c < selectedSize; c++) {
                     int x = startX + c * cellSize;
                     int y = startY + r * cellSize;
-                    KaminoPuzzleSolver.Point cellPoint = new KaminoPuzzleSolver.Point(r, c);
+                    Point cellPoint = new Point(r, c);
 
                     if (!isGhost && cellPoint.equals(flashRedPoint)) {
                         g2d.setColor(ERROR_RED);
                     } else if (pathSet.contains(cellPoint)) {
-                        g2d.setColor(isGhost ? ACCENT_PURPLE : PATH_GREEN);
+                        g2d.setColor(isGhost ? UIUtils.ACCENT_PURPLE : PATH_GREEN);
                     } else if (cellPoint.equals(ePoint)) {
                         g2d.setColor(TARGET_YELLOW);
                     } else {
@@ -792,7 +709,7 @@ public class KaminoGUI extends JFrame {
                     g2d.drawRoundRect(x + 1, y + 1, cellSize - 2, cellSize - 2, 6, 6);
 
                     String text;
-                    Color textColor = TEXT_LIGHT;
+                    Color textColor = UIUtils.TEXT_LIGHT;
 
                     if (cellPoint.equals(sPoint)) {
                         text = "START";
@@ -819,8 +736,8 @@ public class KaminoGUI extends JFrame {
                 g2d.setColor(new Color(255, 255, 255, 220));
                 g2d.setStroke(new BasicStroke(Math.max(2, cellSize / 7), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 for (int i = 0; i < activePath.size() - 1; i++) {
-                    KaminoPuzzleSolver.Point p1 = activePath.get(i);
-                    KaminoPuzzleSolver.Point p2 = activePath.get(i + 1);
+                    Point p1 = activePath.get(i);
+                    Point p2 = activePath.get(i + 1);
 
                     int x1 = startX + p1.col * cellSize + cellSize / 2;
                     int y1 = startY + p1.row * cellSize + cellSize / 2;
@@ -831,30 +748,6 @@ public class KaminoGUI extends JFrame {
                 }
             }
         }
-    }
-
-    private JButton createStyledButton(String text, int width, int height, Color bgColor) {
-        JButton btn = new JButton(text);
-        btn.setPreferredSize(new Dimension(width, height));
-        btn.setBackground(bgColor);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("SansSerif", Font.BOLD, 15));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setBackground(bgColor.brighter());
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setBackground(bgColor);
-            }
-        });
-        return btn;
     }
 
     public static void main(String[] args) {

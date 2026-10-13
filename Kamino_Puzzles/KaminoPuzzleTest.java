@@ -1,5 +1,6 @@
 package Kamino_Puzzles;
 
+import PuzzleHub_Shared.Point;
 import java.util.List;
 
 public class KaminoPuzzleTest {
@@ -7,7 +8,7 @@ public class KaminoPuzzleTest {
     private static int totalPassed = 0;
     private static int totalFailed = 0;
 
-    private static void displayBoard(String[][] grid, List<KaminoPuzzleSolver.Point> path) {
+    private static void displayBoard(String[][] grid, List<Point> path) {
         if (grid.length > 10 || grid[0].length > 10) {
             System.out.println("[Board display omitted for large size: " + grid.length + "x" + grid[0].length + "]");
             return;
@@ -15,7 +16,7 @@ public class KaminoPuzzleTest {
 
         for (int r = 0; r < grid.length; r++) {
             for (int c = 0; c < grid[0].length; c++) {
-                KaminoPuzzleSolver.Point p = new KaminoPuzzleSolver.Point(r, c);
+                Point p = new Point(r, c);
                 boolean onPath = (path != null && path.contains(p));
                 String cell = grid[r][c];
                 if (onPath) {
@@ -39,7 +40,7 @@ public class KaminoPuzzleTest {
         System.out.println("Is Start > Halfway from End? " + (solver.isStartMoreThanHalfway() ? "YES" : "NO"));
 
         long startTime = System.currentTimeMillis();
-        List<KaminoPuzzleSolver.Point> path = solver.solve();
+        List<Point> path = solver.solve();
         long elapsed = System.currentTimeMillis() - startTime;
 
         System.out.println("\nBoard Layout (* marks path):");
@@ -123,27 +124,21 @@ public class KaminoPuzzleTest {
         System.out.println("      AUTOMATED PUZZLE GENERATOR TESTS            ");
         System.out.println("==================================================");
 
-        // Test 1: Small board (3x3)
         String[][] gen3x3 = KaminoPuzzleGenerator.generate(3);
         runTest("Generated 3x3 (Smallest Halfway Board)", gen3x3, true);
 
-        // Test 2: Medium board (8x8)
         String[][] gen8x8 = KaminoPuzzleGenerator.generate(8);
         runTest("Generated 8x8 Solvable", gen8x8, true);
 
-        // Test 3: Large board (20x20)
         String[][] gen20x20 = KaminoPuzzleGenerator.generate(20);
         runTest("Generated 20x20 Solvable", gen20x20, true);
 
-        // Test 4: Extra large board (50x50)
         String[][] gen50x50 = KaminoPuzzleGenerator.generate(50);
         runTest("Generated 50x50 Solvable", gen50x50, true);
 
-        // Test 5: Maximum size board (75x75 Solvable)
         String[][] gen75x75 = KaminoPuzzleGenerator.generate(75);
         runTest("Generated 75x75 Solvable (Max Spec)", gen75x75, true);
 
-        // Test 6: Maximum size board (75x75 Unsolvable)
         String[][] gen75x75Unsolvable = KaminoPuzzleGenerator.generate(75, false);
         runTest("Generated 75x75 Unsolvable (Max Spec)", gen75x75Unsolvable, false);
 

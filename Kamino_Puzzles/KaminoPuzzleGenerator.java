@@ -1,5 +1,6 @@
 package Kamino_Puzzles;
 
+import PuzzleHub_Shared.Point;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -73,10 +74,10 @@ public class KaminoPuzzleGenerator {
         }
 
         // 1. Carve a randomized path from Start to Exit
-        List<KaminoPuzzleSolver.Point> path = new ArrayList<>();
+        List<Point> path = new ArrayList<>();
         int currR = sr;
         int currC = sc;
-        path.add(new KaminoPuzzleSolver.Point(currR, currC));
+        path.add(new Point(currR, currC));
 
         while (currR != er || currC != ec) {
             List<int[]> choices = new ArrayList<>();
@@ -89,15 +90,15 @@ public class KaminoPuzzleGenerator {
             int[] move = choices.get(random.nextInt(choices.size()));
             currR += move[0];
             currC += move[1];
-            path.add(new KaminoPuzzleSolver.Point(currR, currC));
+            path.add(new Point(currR, currC));
         }
 
         // 2. Assign relative step values along the path matching Kamino rules
         int[] relVals = new int[path.size()];
         int minRel = 0;
         for (int i = 1; i < path.size(); i++) {
-            KaminoPuzzleSolver.Point prev = path.get(i - 1);
-            KaminoPuzzleSolver.Point curr = path.get(i);
+            Point prev = path.get(i - 1);
+            Point curr = path.get(i);
 
             if (curr.row < prev.row) { // UP -> next must be strictly higher
                 relVals[i] = relVals[i - 1] + 1;
@@ -133,13 +134,13 @@ public class KaminoPuzzleGenerator {
 
         // 5. Stamp the valid path onto the board
         for (int i = 1; i < path.size() - 1; i++) {
-            KaminoPuzzleSolver.Point p = path.get(i);
+            Point p = path.get(i);
             grid[p.row][p.col] = String.valueOf(finalVals[i]);
         }
 
         // Place S and E
         grid[sr][sc] = "S";
-        KaminoPuzzleSolver.Point endPoint = path.get(path.size() - 1);
+        Point endPoint = path.get(path.size() - 1);
         grid[endPoint.row][endPoint.col] = "E:" + finalVals[path.size() - 1];
 
         return grid;
@@ -159,8 +160,6 @@ public class KaminoPuzzleGenerator {
         grid[er][ec] = "E:9";
 
         // Surround target E:9 with 1s:
-        // - From above: downward step requires lower, but 9 < 1 is false.
-        // - From right: horizontal step requires equality, but 1 == 9 is false.
         int[][] neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         for (int[] offset : neighbors) {
             int nr = er + offset[0];

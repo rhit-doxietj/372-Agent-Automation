@@ -1,9 +1,10 @@
+import PuzzleHub_Shared.UIUtils;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
@@ -71,14 +72,13 @@ public class RectoGUI extends JFrame {
 
     private JPanel createHomeScreen() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(30, 32, 40));
+        panel.setBackground(UIUtils.BG_DARK);
 
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topBar.setOpaque(false);
         topBar.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        JButton rulesBtn = new JButton("Rules");
-        styleButton(rulesBtn, new Color(70, 130, 180));
+        JButton rulesBtn = UIUtils.createStyledButton("Rules", 140, 38, new Color(70, 130, 180));
         rulesBtn.addActionListener(e -> showRulesDialog());
         topBar.add(rulesBtn);
         panel.add(topBar, BorderLayout.NORTH);
@@ -94,16 +94,14 @@ public class RectoGUI extends JFrame {
 
         JLabel subtitle = new JLabel("Grid Partitioning Logic Game");
         subtitle.setFont(new Font("SansSerif", Font.PLAIN, 18));
-        subtitle.setForeground(new Color(180, 180, 180));
+        subtitle.setForeground(UIUtils.TEXT_LIGHT);
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton startBtn = new JButton("Start Game");
-        JButton settingsBtn = new JButton("Settings");
-        JButton quitBtn = onReturnToHub != null ? new JButton("Back to Hub") : new JButton("Quit");
-
-        styleButton(startBtn, new Color(46, 139, 87));
-        styleButton(settingsBtn, new Color(100, 100, 100));
-        styleButton(quitBtn, onReturnToHub != null ? new Color(70, 75, 85) : new Color(178, 34, 34));
+        JButton startBtn = UIUtils.createStyledButton("Start Game", 220, 45, new Color(46, 139, 87));
+        JButton settingsBtn = UIUtils.createStyledButton("Settings", 220, 45, new Color(100, 100, 100));
+        JButton quitBtn = onReturnToHub != null ? 
+            UIUtils.createStyledButton("Back to Hub", 220, 45, new Color(70, 75, 85)) : 
+            UIUtils.createStyledButton("Quit", 220, 45, new Color(178, 34, 34));
 
         startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         settingsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -149,7 +147,7 @@ public class RectoGUI extends JFrame {
 
     private JPanel createGameModeScreen() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(35, 37, 45));
+        panel.setBackground(UIUtils.PANEL_BG);
         panel.setBorder(new EmptyBorder(30, 40, 30, 40));
 
         JLabel header = new JLabel("Select Game Mode", SwingConstants.CENTER);
@@ -178,10 +176,13 @@ public class RectoGUI extends JFrame {
 
         panel.add(modesGrid, BorderLayout.CENTER);
 
-        JButton backBtn = new JButton("Back to Main Menu");
-        styleButton(backBtn, new Color(100, 100, 100));
+        JButton backBtn = UIUtils.createStyledButton("Back to Main Menu", 200, 40, new Color(100, 100, 100));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "HOME"));
-        panel.add(backBtn, BorderLayout.SOUTH);
+        
+        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        southPanel.setOpaque(false);
+        southPanel.add(backBtn);
+        panel.add(southPanel, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -213,7 +214,7 @@ public class RectoGUI extends JFrame {
 
     private JPanel createPuzzleSetupScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(new Color(40, 44, 52));
+        panel.setBackground(UIUtils.PANEL_BG);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -278,12 +279,10 @@ public class RectoGUI extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         btnPanel.setOpaque(false);
 
-        JButton backBtn = new JButton("Back");
-        styleButton(backBtn, new Color(100, 100, 100));
+        JButton backBtn = UIUtils.createStyledButton("Back", 140, 40, new Color(100, 100, 100));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "MODES"));
 
-        JButton launchBtn = new JButton("Play Puzzle");
-        styleButton(launchBtn, new Color(46, 139, 87));
+        JButton launchBtn = UIUtils.createStyledButton("Play Puzzle", 160, 40, new Color(46, 139, 87));
         launchBtn.addActionListener(e -> {
             if (selectedSize == BoardSize.CUSTOM) {
                 this.customRows = (int) rowSpinner.getValue();
@@ -303,7 +302,7 @@ public class RectoGUI extends JFrame {
 
     private JPanel createSettingsScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(new Color(40, 44, 52));
+        panel.setBackground(UIUtils.PANEL_BG);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -334,8 +333,7 @@ public class RectoGUI extends JFrame {
         gbc.gridwidth = 2;
         panel.add(muteBox, gbc);
 
-        JButton backBtn = new JButton("Back to Main Menu");
-        styleButton(backBtn, new Color(100, 100, 100));
+        JButton backBtn = UIUtils.createStyledButton("Back to Main Menu", 200, 40, new Color(100, 100, 100));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "HOME"));
 
         gbc.gridy = 3; gbc.gridx = 0; gbc.gridwidth = 2; gbc.insets = new Insets(20, 10, 10, 10);
@@ -346,7 +344,7 @@ public class RectoGUI extends JFrame {
 
     private JPanel createGamePlayScreen() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(25, 25, 30));
+        panel.setBackground(UIUtils.BG_DARK);
 
         JPanel hud = new JPanel(new BorderLayout());
         hud.setOpaque(false);
@@ -363,9 +361,7 @@ public class RectoGUI extends JFrame {
         JPanel navControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         navControls.setOpaque(false);
 
-        JButton menuBtn = new JButton("Main Menu");
-        styleButton(menuBtn, new Color(100, 100, 100));
-        menuBtn.setPreferredSize(new Dimension(120, 35));
+        JButton menuBtn = UIUtils.createStyledButton("Main Menu", 120, 35, new Color(100, 100, 100));
         menuBtn.addActionListener(e -> {
             if (gameTimer != null) gameTimer.stop();
             if (onReturnToHub != null) {
@@ -391,16 +387,14 @@ public class RectoGUI extends JFrame {
         gameOverText.setFont(new Font("SansSerif", Font.BOLD, 18));
         gameOverText.setForeground(Color.WHITE);
 
-        showSolutionBtn = new JButton("Hide Solution");
-        styleButton(showSolutionBtn, new Color(70, 130, 180));
+        showSolutionBtn = UIUtils.createStyledButton("Hide Solution", 140, 35, new Color(70, 130, 180));
         showSolutionBtn.addActionListener(e -> {
             showSolutionOverlay = !showSolutionOverlay;
             showSolutionBtn.setText(showSolutionOverlay ? "Hide Solution" : "Show Solution");
             boardPanel.repaint();
         });
 
-        JButton retryBtn = new JButton("Try Again");
-        styleButton(retryBtn, new Color(46, 139, 87));
+        JButton retryBtn = UIUtils.createStyledButton("Try Again", 120, 35, new Color(46, 139, 87));
         retryBtn.addActionListener(e -> startNewGame());
 
         gameOverBar.add(gameOverText);
@@ -645,40 +639,11 @@ public class RectoGUI extends JFrame {
 
     private void playSound(boolean isCorrect) {
         if (soundMuted || soundVolume <= 0.01f) return;
-
-        new Thread(() -> {
-            try {
-                float sampleRate = 44100;
-                int durationMs = isCorrect ? 450 : 350;
-                int numSamples = (int) (durationMs * sampleRate / 1000);
-                byte[] buffer = new byte[numSamples];
-
-                for (int i = 0; i < numSamples; i++) {
-                    double t = i / sampleRate;
-                    double wave;
-                    if (isCorrect) {
-                        double freq1 = 1046.50;
-                        double freq2 = 1318.51;
-                        
-                        double envelope = Math.exp(-t * 6.0); 
-                        double tone1 = Math.sin(2 * Math.PI * freq1 * t);
-                        double tone2 = Math.sin(2 * Math.PI * freq2 * t);
-                        wave = ((tone1 + tone2) * 0.5) * envelope;
-                    } else {
-                        wave = (t * 150) % 1.0 - 0.5;
-                    }
-                    buffer[i] = (byte) (wave * 60 * soundVolume);
-                }
-
-                AudioFormat af = new AudioFormat(sampleRate, 8, 1, true, false);
-                SourceDataLine line = AudioSystem.getSourceDataLine(af);
-                line.open(af);
-                line.start();
-                line.write(buffer, 0, buffer.length);
-                line.drain();
-                line.close();
-            } catch (Exception ignored) {}
-        }).start();
+        if (isCorrect) {
+            UIUtils.playTone(1046.50, 450, soundVolume);
+        } else {
+            UIUtils.playTone(150.0, 350, soundVolume);
+        }
     }
 
     private class BoardPanel extends JPanel {
@@ -945,14 +910,6 @@ public class RectoGUI extends JFrame {
                 }
             }
         }
-    }
-
-    private void styleButton(JButton btn, Color bg) {
-        btn.setBackground(bg);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("SansSerif", Font.BOLD, 16));
-        btn.setFocusPainted(false);
-        btn.setPreferredSize(new Dimension(180, 40));
     }
 
     public static void main(String[] args) {
