@@ -55,9 +55,10 @@ public class RectoGUI extends JFrame {
 
     public RectoGUI(Runnable onReturnToHub) {
         this.onReturnToHub = onReturnToHub;
-        setTitle("Recto Puzzle Game");
+        setTitle("Recto-Room");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(950, 750);
+        setSize(1150, 860);
+        setMinimumSize(new Dimension(750, 650));
         setLocationRelativeTo(null);
 
         mainPanel.add(createHomeScreen(), "HOME");
@@ -76,9 +77,9 @@ public class RectoGUI extends JFrame {
 
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topBar.setOpaque(false);
-        topBar.setBorder(new EmptyBorder(10, 10, 10, 10));
+        topBar.setBorder(new EmptyBorder(12, 15, 12, 15));
 
-        JButton rulesBtn = UIUtils.createStyledButton("Rules", 140, 38, new Color(70, 130, 180));
+        JButton rulesBtn = UIUtils.createStyledButton("Rules", 130, 38, new Color(90, 100, 115));
         rulesBtn.addActionListener(e -> showRulesDialog());
         topBar.add(rulesBtn);
         panel.add(topBar, BorderLayout.NORTH);
@@ -88,8 +89,8 @@ public class RectoGUI extends JFrame {
         centerPanel.setOpaque(false);
 
         JLabel title = new JLabel("RECTO-ROOM");
-        title.setFont(new Font("SansSerif", Font.BOLD, 64));
-        title.setForeground(Color.WHITE);
+        title.setFont(new Font("SansSerif", Font.BOLD, 75));
+        title.setForeground(UIUtils.ACCENT_PURPLE);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel subtitle = new JLabel("Grid Partitioning Logic Game");
@@ -97,11 +98,11 @@ public class RectoGUI extends JFrame {
         subtitle.setForeground(UIUtils.TEXT_LIGHT);
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton startBtn = UIUtils.createStyledButton("Start Game", 220, 45, new Color(46, 139, 87));
-        JButton settingsBtn = UIUtils.createStyledButton("Settings", 220, 45, new Color(100, 100, 100));
+        JButton startBtn = UIUtils.createStyledButton("Start Game", 240, 48, UIUtils.ACCENT_BLUE);
+        JButton settingsBtn = UIUtils.createStyledButton("Settings", 240, 48, new Color(90, 100, 115));
         JButton quitBtn = onReturnToHub != null ? 
-            UIUtils.createStyledButton("Back to Hub", 220, 45, new Color(70, 75, 85)) : 
-            UIUtils.createStyledButton("Quit", 220, 45, new Color(178, 34, 34));
+            UIUtils.createStyledButton("Back to Hub", 240, 40, new Color(70, 75, 85)) : 
+            UIUtils.createStyledButton("Quit", 240, 40, new Color(178, 34, 34));
 
         startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         settingsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -147,22 +148,22 @@ public class RectoGUI extends JFrame {
 
     private JPanel createGameModeScreen() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIUtils.PANEL_BG);
+        panel.setBackground(UIUtils.BG_DARK);
         panel.setBorder(new EmptyBorder(30, 40, 30, 40));
 
         JLabel header = new JLabel("Select Game Mode", SwingConstants.CENTER);
-        header.setFont(new Font("SansSerif", Font.BOLD, 32));
-        header.setForeground(Color.WHITE);
+        header.setFont(new Font("SansSerif", Font.BOLD, 36));
+        header.setForeground(UIUtils.TEXT_LIGHT);
         panel.add(header, BorderLayout.NORTH);
 
         JPanel modesGrid = new JPanel(new GridLayout(2, 2, 20, 20));
         modesGrid.setOpaque(false);
         modesGrid.setBorder(new EmptyBorder(30, 0, 30, 0));
 
-        JButton classicBtn = createModeCard("Classic", "Standard Recto rules with 3 Lives.", new Color(41, 128, 185));
+        JButton classicBtn = createModeCard("Classic", "Standard Recto rules with 3 Lives.", UIUtils.ACCENT_BLUE);
         JButton timeTrialBtn = createModeCard("Time Trial", "3 Lives with a time limit scaling by difficulty.", new Color(211, 84, 0));
         JButton hardcoreBtn = createModeCard("Hardcore", "Single mistake equals instant failure (1 Life).", new Color(192, 57, 43));
-        JButton fogBtn = createModeCard("Fog of War", "Grid is obscured until sections are revealed.", new Color(142, 68, 173));
+        JButton fogBtn = createModeCard("Fog of War", "Grid is obscured until sections are revealed.", UIUtils.ACCENT_PURPLE);
 
         classicBtn.addActionListener(e -> selectMode(GameMode.CLASSIC));
         timeTrialBtn.addActionListener(e -> selectMode(GameMode.TIME_TRIAL));
@@ -176,7 +177,7 @@ public class RectoGUI extends JFrame {
 
         panel.add(modesGrid, BorderLayout.CENTER);
 
-        JButton backBtn = UIUtils.createStyledButton("Back to Main Menu", 200, 40, new Color(100, 100, 100));
+        JButton backBtn = UIUtils.createStyledButton("Back to Main Menu", 200, 45, new Color(90, 98, 110));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "HOME"));
         
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -192,7 +193,7 @@ public class RectoGUI extends JFrame {
         button.setLayout(new BorderLayout());
         button.setBackground(bg);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createLineBorder(Color.WHITE, 1));
+        button.setBorder(BorderFactory.createLineBorder(new Color(60, 68, 80), 1));
 
         JLabel titleLbl = new JLabel(title, SwingConstants.CENTER);
         titleLbl.setFont(new Font("SansSerif", Font.BOLD, 22));
@@ -214,48 +215,48 @@ public class RectoGUI extends JFrame {
 
     private JPanel createPuzzleSetupScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(UIUtils.PANEL_BG);
+        panel.setBackground(UIUtils.BG_DARK);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel title = new JLabel("Puzzle Configuration", SwingConstants.CENTER);
-        title.setFont(new Font("SansSerif", Font.BOLD, 28));
-        title.setForeground(Color.WHITE);
+        title.setFont(new Font("SansSerif", Font.BOLD, 36));
+        title.setForeground(UIUtils.TEXT_LIGHT);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panel.add(title, gbc);
 
-        gbc.gridwidth = 1; gbc.gridy = 1; gbc.gridx = 0;
-        JLabel sizeLbl = new JLabel("Board Size:");
-        sizeLbl.setForeground(Color.WHITE);
-        panel.add(sizeLbl, gbc);
+        JPanel settingsBox = new JPanel(new GridLayout(5, 2, 10, 15));
+        settingsBox.setBackground(UIUtils.PANEL_BG);
+        settingsBox.setBorder(new EmptyBorder(25, 35, 25, 35));
 
+        JLabel sizeLbl = new JLabel("Board Size:");
+        sizeLbl.setForeground(UIUtils.TEXT_LIGHT);
         JComboBox<String> sizeCombo = new JComboBox<>(new String[]{"Small (5x5)", "Medium (8x8)", "Large (12x12)", "Custom"});
         sizeCombo.setSelectedIndex(1);
-        gbc.gridx = 1;
-        panel.add(sizeCombo, gbc);
+        settingsBox.add(sizeLbl);
+        settingsBox.add(sizeCombo);
 
         JLabel rowLbl = new JLabel("Custom Rows (1-99):");
         rowLbl.setForeground(Color.GRAY);
         JSpinner rowSpinner = new JSpinner(new SpinnerNumberModel(15, 1, 99, 1));
         rowSpinner.setEnabled(false);
+        settingsBox.add(rowLbl);
+        settingsBox.add(rowSpinner);
 
         JLabel colLbl = new JLabel("Custom Cols (1-99):");
         colLbl.setForeground(Color.GRAY);
         JSpinner colSpinner = new JSpinner(new SpinnerNumberModel(15, 1, 99, 1));
         colSpinner.setEnabled(false);
-
-        gbc.gridy = 2; gbc.gridx = 0; panel.add(rowLbl, gbc);
-        gbc.gridx = 1; panel.add(rowSpinner, gbc);
-        gbc.gridy = 3; gbc.gridx = 0; panel.add(colLbl, gbc);
-        gbc.gridx = 1; panel.add(colSpinner, gbc);
+        settingsBox.add(colLbl);
+        settingsBox.add(colSpinner);
 
         sizeCombo.addActionListener(e -> {
             boolean isCustom = sizeCombo.getSelectedIndex() == 3;
             rowSpinner.setEnabled(isCustom);
             colSpinner.setEnabled(isCustom);
-            rowLbl.setForeground(isCustom ? Color.WHITE : Color.GRAY);
-            colLbl.setForeground(isCustom ? Color.WHITE : Color.GRAY);
+            rowLbl.setForeground(isCustom ? UIUtils.TEXT_LIGHT : Color.GRAY);
+            colLbl.setForeground(isCustom ? UIUtils.TEXT_LIGHT : Color.GRAY);
 
             switch (sizeCombo.getSelectedIndex()) {
                 case 0 -> selectedSize = BoardSize.SMALL;
@@ -265,24 +266,24 @@ public class RectoGUI extends JFrame {
             }
         });
 
-        gbc.gridy = 4; gbc.gridx = 0;
         JLabel diffLbl = new JLabel("Difficulty:");
-        diffLbl.setForeground(Color.WHITE);
-        panel.add(diffLbl, gbc);
-
+        diffLbl.setForeground(UIUtils.TEXT_LIGHT);
         JComboBox<String> diffCombo = new JComboBox<>(new String[]{"Easy", "Medium", "Hard"});
         diffCombo.setSelectedIndex(1);
-        gbc.gridx = 1;
-        panel.add(diffCombo, gbc);
         diffCombo.addActionListener(e -> selectedDifficulty = (String) diffCombo.getSelectedItem());
+        settingsBox.add(diffLbl);
+        settingsBox.add(diffCombo);
+
+        gbc.gridy = 1; gbc.gridx = 0; gbc.gridwidth = 2;
+        panel.add(settingsBox, gbc);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         btnPanel.setOpaque(false);
 
-        JButton backBtn = UIUtils.createStyledButton("Back", 140, 40, new Color(100, 100, 100));
+        JButton backBtn = UIUtils.createStyledButton("Back", 140, 45, new Color(90, 98, 110));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "MODES"));
 
-        JButton launchBtn = UIUtils.createStyledButton("Play Puzzle", 160, 40, new Color(46, 139, 87));
+        JButton launchBtn = UIUtils.createStyledButton("Play Puzzle", 180, 45, UIUtils.ACCENT_BLUE);
         launchBtn.addActionListener(e -> {
             if (selectedSize == BoardSize.CUSTOM) {
                 this.customRows = (int) rowSpinner.getValue();
@@ -294,7 +295,7 @@ public class RectoGUI extends JFrame {
         btnPanel.add(backBtn);
         btnPanel.add(launchBtn);
 
-        gbc.gridy = 5; gbc.gridx = 0; gbc.gridwidth = 2; gbc.insets = new Insets(20, 10, 10, 10);
+        gbc.gridy = 2; gbc.insets = new Insets(20, 15, 15, 15);
         panel.add(btnPanel, gbc);
 
         return panel;
@@ -302,41 +303,43 @@ public class RectoGUI extends JFrame {
 
     private JPanel createSettingsScreen() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(UIUtils.PANEL_BG);
+        panel.setBackground(UIUtils.BG_DARK);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel title = new JLabel("Sound Settings", SwingConstants.CENTER);
-        title.setFont(new Font("SansSerif", Font.BOLD, 28));
-        title.setForeground(Color.WHITE);
+        title.setFont(new Font("SansSerif", Font.BOLD, 36));
+        title.setForeground(UIUtils.TEXT_LIGHT);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panel.add(title, gbc);
 
-        gbc.gridwidth = 1; gbc.gridy = 1; gbc.gridx = 0;
-        JLabel soundLbl = new JLabel("Sound Volume:");
-        soundLbl.setForeground(Color.WHITE);
-        panel.add(soundLbl, gbc);
+        JPanel settingsBox = new JPanel(new GridLayout(2, 2, 10, 15));
+        settingsBox.setBackground(UIUtils.PANEL_BG);
+        settingsBox.setBorder(new EmptyBorder(25, 35, 25, 35));
 
+        JLabel soundLbl = new JLabel("Sound Volume:");
+        soundLbl.setForeground(UIUtils.TEXT_LIGHT);
         JSlider volSlider = new JSlider(0, 100, (int) (soundVolume * 100));
         volSlider.setOpaque(false);
         volSlider.addChangeListener(e -> soundVolume = volSlider.getValue() / 100.0f);
-        gbc.gridx = 1;
-        panel.add(volSlider, gbc);
+        settingsBox.add(soundLbl);
+        settingsBox.add(volSlider);
 
-        gbc.gridy = 2; gbc.gridx = 0;
         JCheckBox muteBox = new JCheckBox("Mute Audio");
         muteBox.setSelected(soundMuted);
-        muteBox.setForeground(Color.WHITE);
+        muteBox.setForeground(UIUtils.TEXT_LIGHT);
         muteBox.setOpaque(false);
         muteBox.addActionListener(e -> soundMuted = muteBox.isSelected());
-        gbc.gridwidth = 2;
-        panel.add(muteBox, gbc);
+        settingsBox.add(muteBox);
 
-        JButton backBtn = UIUtils.createStyledButton("Back to Main Menu", 200, 40, new Color(100, 100, 100));
+        gbc.gridy = 1; gbc.gridwidth = 2;
+        panel.add(settingsBox, gbc);
+
+        JButton backBtn = UIUtils.createStyledButton("Back to Main Menu", 200, 45, new Color(90, 98, 110));
         backBtn.addActionListener(e -> cardLayout.show(mainPanel, "HOME"));
 
-        gbc.gridy = 3; gbc.gridx = 0; gbc.gridwidth = 2; gbc.insets = new Insets(20, 10, 10, 10);
+        gbc.gridy = 2; gbc.insets = new Insets(20, 15, 15, 15);
         panel.add(backBtn, gbc);
 
         return panel;
@@ -347,21 +350,22 @@ public class RectoGUI extends JFrame {
         panel.setBackground(UIUtils.BG_DARK);
 
         JPanel hud = new JPanel(new BorderLayout());
-        hud.setOpaque(false);
-        hud.setBorder(new EmptyBorder(10, 20, 10, 20));
+        hud.setBackground(UIUtils.PANEL_BG);
+        hud.setBorder(new EmptyBorder(12, 20, 12, 20));
 
         livesLabel = new JLabel("Lives: 3");
-        livesLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        livesLabel.setForeground(Color.RED);
+        livesLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        livesLabel.setForeground(new Color(239, 83, 80));
 
         timerLabel = new JLabel("Time: 00:00");
-        timerLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        timerLabel.setForeground(Color.CYAN);
+        timerLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        timerLabel.setForeground(UIUtils.TEXT_LIGHT);
+        timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         JPanel navControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         navControls.setOpaque(false);
 
-        JButton menuBtn = UIUtils.createStyledButton("Main Menu", 120, 35, new Color(100, 100, 100));
+        JButton menuBtn = UIUtils.createStyledButton("Main Menu", 110, 35, new Color(70, 75, 85));
         menuBtn.addActionListener(e -> {
             if (gameTimer != null) gameTimer.stop();
             if (onReturnToHub != null) {
@@ -376,7 +380,6 @@ public class RectoGUI extends JFrame {
 
         hud.add(livesLabel, BorderLayout.WEST);
         hud.add(timerLabel, BorderLayout.CENTER);
-        timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         hud.add(navControls, BorderLayout.EAST);
 
         gameOverBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
@@ -650,7 +653,7 @@ public class RectoGUI extends JFrame {
         private final int PADDING = 20;
 
         public BoardPanel() {
-            setBackground(new Color(20, 22, 28));
+            setBackground(UIUtils.BG_DARK);
 
             MouseAdapter adapter = new MouseAdapter() {
                 @Override
@@ -818,13 +821,13 @@ public class RectoGUI extends JFrame {
                         continue;
                     }
 
-                    g2.setColor(new Color(45, 48, 58));
+                    g2.setColor(new Color(44, 49, 58)); // Kamino TILE_DEFAULT style
                     g2.fillRect(x, y, cellSize, cellSize);
-                    g2.setColor(new Color(60, 64, 76));
+                    g2.setColor(new Color(20, 22, 26));
                     g2.drawRect(x, y, cellSize, cellSize);
 
                     if (grid[r][c] > 0 && cellSize >= 8) {
-                        g2.setColor(Color.WHITE);
+                        g2.setColor(UIUtils.TEXT_LIGHT);
                         g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(8, cellSize / 2)));
                         String valStr = String.valueOf(grid[r][c]);
                         FontMetrics fm = g2.getFontMetrics();
@@ -842,9 +845,9 @@ public class RectoGUI extends JFrame {
                 int rw = (rect.c2 - rect.c1 + 1) * cellSize;
                 int rh = (rect.r2 - rect.r1 + 1) * cellSize;
 
-                g2.setColor(new Color(46, 204, 113, 80));
+                g2.setColor(new Color(76, 175, 80, 80));
                 g2.fillRect(rx, ry, rw, rh);
-                g2.setColor(new Color(46, 204, 113));
+                g2.setColor(new Color(76, 175, 80));
                 g2.drawRect(rx, ry, rw, rh);
             }
 
@@ -854,9 +857,9 @@ public class RectoGUI extends JFrame {
                 int rw = (errorRect.c2 - errorRect.c1 + 1) * cellSize;
                 int erh = (errorRect.r2 - errorRect.r1 + 1) * cellSize;
 
-                g2.setColor(new Color(231, 76, 60, 100));
+                g2.setColor(new Color(239, 83, 80, 100));
                 g2.fillRect(rx, ry, rw, erh);
-                g2.setColor(new Color(231, 76, 60));
+                g2.setColor(new Color(239, 83, 80));
                 g2.drawRect(rx, ry, rw, erh);
             }
 
@@ -871,9 +874,9 @@ public class RectoGUI extends JFrame {
                 int dw = (c2 - c1 + 1) * cellSize;
                 int dh = (r2 - r1 + 1) * cellSize;
 
-                g2.setColor(new Color(52, 152, 219, 100));
+                g2.setColor(new Color(70, 130, 180, 100));
                 g2.fillRect(dx, dy, dw, dh);
-                g2.setColor(new Color(52, 152, 219));
+                g2.setColor(UIUtils.ACCENT_BLUE);
                 g2.drawRect(dx, dy, dw, dh);
             }
 
@@ -886,7 +889,7 @@ public class RectoGUI extends JFrame {
                     new float[]{4},
                     0
                 ));
-                g2.setColor(new Color(231, 76, 60));
+                g2.setColor(new Color(239, 83, 80));
 
                 for (int r = 0; r < rows; r++) {
                     for (int c = 0; c < cols; c++) {
