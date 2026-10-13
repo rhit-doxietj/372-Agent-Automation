@@ -14,6 +14,7 @@ public class RectoGUI extends JFrame {
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel mainPanel = new JPanel(cardLayout);
+    private Runnable onReturnToHub;
 
     private GameMode selectedMode = GameMode.CLASSIC;
     private BoardSize selectedSize = BoardSize.MEDIUM;
@@ -48,6 +49,11 @@ public class RectoGUI extends JFrame {
     private BoardPanel boardPanel;
 
     public RectoGUI() {
+        this(null);
+    }
+
+    public RectoGUI(Runnable onReturnToHub) {
+        this.onReturnToHub = onReturnToHub;
         setTitle("Recto Puzzle Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(950, 750);
@@ -93,11 +99,11 @@ public class RectoGUI extends JFrame {
 
         JButton startBtn = new JButton("Start Game");
         JButton settingsBtn = new JButton("Settings");
-        JButton quitBtn = new JButton("Quit");
+        JButton quitBtn = onReturnToHub != null ? new JButton("Back to Hub") : new JButton("Quit");
 
         styleButton(startBtn, new Color(46, 139, 87));
         styleButton(settingsBtn, new Color(100, 100, 100));
-        styleButton(quitBtn, new Color(178, 34, 34));
+        styleButton(quitBtn, onReturnToHub != null ? new Color(70, 75, 85) : new Color(178, 34, 34));
 
         startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         settingsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -105,7 +111,14 @@ public class RectoGUI extends JFrame {
 
         startBtn.addActionListener(e -> cardLayout.show(mainPanel, "MODES"));
         settingsBtn.addActionListener(e -> cardLayout.show(mainPanel, "SETTINGS"));
-        quitBtn.addActionListener(e -> System.exit(0));
+        if (onReturnToHub != null) {
+            quitBtn.addActionListener(e -> {
+                dispose();
+                onReturnToHub.run();
+            });
+        } else {
+            quitBtn.addActionListener(e -> System.exit(0));
+        }
 
         centerPanel.add(Box.createVerticalGlue());
         centerPanel.add(title);
@@ -355,7 +368,12 @@ public class RectoGUI extends JFrame {
         menuBtn.setPreferredSize(new Dimension(120, 35));
         menuBtn.addActionListener(e -> {
             if (gameTimer != null) gameTimer.stop();
-            cardLayout.show(mainPanel, "HOME");
+            if (onReturnToHub != null) {
+                dispose();
+                onReturnToHub.run();
+            } else {
+                cardLayout.show(mainPanel, "HOME");
+            }
         });
 
         navControls.add(menuBtn);
@@ -430,7 +448,6 @@ public class RectoGUI extends JFrame {
 
         this.solver = new Recto(grid);
 
-        // Always register every partition piece to set full cell-by-cell ownership across the board
         for (int i = 0; i < genRes.partitions.size(); i++) {
             Recto.Rect partition = genRes.partitions.get(i);
             int partitionClueId = -1;
@@ -823,7 +840,6 @@ public class RectoGUI extends JFrame {
             int startX = (getWidth() - cols * cellSize) / 2;
             int startY = (getHeight() - rows * cellSize) / 2;
 
-            // 1. Render board background and cells
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     int x = startX + c * cellSize;
@@ -854,7 +870,6 @@ public class RectoGUI extends JFrame {
                 }
             }
 
-            // 2. Render player attempts behind the solution layer
             g2.setStroke(new BasicStroke(Math.max(1, cellSize / 10)));
             for (Recto.Rect rect : playerRects) {
                 int rx = startX + rect.c1 * cellSize;
@@ -897,7 +912,6 @@ public class RectoGUI extends JFrame {
                 g2.drawRect(dx, dy, dw, dh);
             }
 
-            // 3. Render Solution Overlay ON TOP of player attempts with clear inner lines
             if (showSolutionOverlay) {
                 g2.setStroke(new BasicStroke(
                     Math.max(2, cellSize / 6),
@@ -907,7 +921,7 @@ public class RectoGUI extends JFrame {
                     new float[]{4},
                     0
                 ));
-                g2.setColor(new Color(231, 76, 60)); // Vibrant red outline
+                g2.setColor(new Color(231, 76, 60));
 
                 for (int r = 0; r < rows; r++) {
                     for (int c = 0; c < cols; c++) {
@@ -915,19 +929,15 @@ public class RectoGUI extends JFrame {
                         int x = startX + c * cellSize;
                         int y = startY + r * cellSize;
 
-                        // Top edge: draw if cell above has different partition owner or is off board
                         if (r == 0 || solver.getCellOwner(r - 1, c) != owner) {
                             g2.drawLine(x, y, x + cellSize, y);
                         }
-                        // Bottom edge
                         if (r == rows - 1 || solver.getCellOwner(r + 1, c) != owner) {
                             g2.drawLine(x, y + cellSize, x + cellSize, y + cellSize);
                         }
-                        // Left edge
                         if (c == 0 || solver.getCellOwner(r, c - 1) != owner) {
                             g2.drawLine(x, y, x, y + cellSize);
                         }
-                        // Right edge
                         if (c == cols - 1 || solver.getCellOwner(r, c + 1) != owner) {
                             g2.drawLine(x + cellSize, y, x + cellSize, y + cellSize);
                         }
@@ -950,6 +960,4 @@ public class RectoGUI extends JFrame {
             new RectoGUI().setVisible(true);
         });
     }
-
-    
 }

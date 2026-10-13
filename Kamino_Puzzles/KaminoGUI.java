@@ -14,6 +14,7 @@ public class KaminoGUI extends JFrame {
 
     private CardLayout cardLayout;
     private JPanel mainContainer;
+    private Runnable onReturnToHub;
 
     // Game Mode State
     public enum GameMode { SOLO, RACE }
@@ -62,6 +63,11 @@ public class KaminoGUI extends JFrame {
     private static final Color TEXT_LIGHT = new Color(230, 235, 245);
 
     public KaminoGUI() {
+        this(null);
+    }
+
+    public KaminoGUI(Runnable onReturnToHub) {
+        this.onReturnToHub = onReturnToHub;
         setTitle("Kamino.IO");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1150, 860);
@@ -128,6 +134,17 @@ public class KaminoGUI extends JFrame {
         rulesBtn.addActionListener(e -> cardLayout.show(mainContainer, "RULES"));
         gbc.gridy = 4;
         panel.add(rulesBtn, gbc);
+
+        // Return to Hub Button if launched from GameLauncher
+        if (onReturnToHub != null) {
+            JButton hubBtn = createStyledButton("BACK TO HUB", 240, 40, new Color(70, 75, 85));
+            hubBtn.addActionListener(e -> {
+                dispose();
+                onReturnToHub.run();
+            });
+            gbc.gridy = 5;
+            panel.add(hubBtn, gbc);
+        }
 
         return panel;
     }
@@ -293,14 +310,18 @@ public class KaminoGUI extends JFrame {
         JButton menuBtn = createStyledButton("Menu", 90, 35, new Color(70, 75, 85));
         menuBtn.addActionListener(e -> {
             stopGhostTimer();
-            cardLayout.show(mainContainer, "HOME");
+            if (onReturnToHub != null) {
+                dispose();
+                onReturnToHub.run();
+            } else {
+                cardLayout.show(mainContainer, "HOME");
+            }
         });
         controls.add(menuBtn);
 
         topBar.add(controls, BorderLayout.EAST);
         wrapper.add(topBar, BorderLayout.NORTH);
 
-        // Center Container that dynamically switches between Solo and Race Layouts
         boardsContainer = new JPanel(new BorderLayout());
         boardsContainer.setBackground(BG_DARK);
         wrapper.add(boardsContainer, BorderLayout.CENTER);
@@ -308,16 +329,12 @@ public class KaminoGUI extends JFrame {
         return wrapper;
     }
 
-    // ==========================================================
-    // GAME INITIALIZATION & RUNTIME
-    // ==========================================================
     private void startNewGame(int size) {
         stopGhostTimer();
         this.selectedSize = size;
         this.isAnimatingFlow = false;
         this.animatedFlowPath.clear();
 
-        // 1. Generate Player Puzzle Board
         this.playerGrid = KaminoPuzzleGenerator.generate(size, size, true);
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
@@ -336,14 +353,12 @@ public class KaminoGUI extends JFrame {
         playerBoardCanvas = new BoardCanvas(false);
         JScrollPane playerScroll = createScrollPane(playerBoardCanvas);
 
-        // 2. Setup Boards Layout
         boardsContainer.removeAll();
 
         if (currentMode == GameMode.SOLO) {
             raceProgressLabel.setText("Solo Mode: Find the path to the yellow end square.");
             boardsContainer.add(playerScroll, BorderLayout.CENTER);
         } else {
-            // RACE MODE: Generate a SECOND, completely separate board for Ghost
             this.ghostGrid = KaminoPuzzleGenerator.generate(size, size, true);
             for (int r = 0; r < size; r++) {
                 for (int c = 0; c < size; c++) {
@@ -357,7 +372,6 @@ public class KaminoGUI extends JFrame {
                 }
             }
 
-            // Compute optimal path for Ghost
             KaminoPuzzleSolver ghostSolver = new KaminoPuzzleSolver(ghostGrid);
             ghostOptimalPath = ghostSolver.solve();
             ghostCurrentPath.clear();
@@ -368,7 +382,6 @@ public class KaminoGUI extends JFrame {
             ghostBoardCanvas = new BoardCanvas(true);
             JScrollPane ghostScroll = createScrollPane(ghostBoardCanvas);
 
-            // Wrap each board with a header label
             JPanel leftWrapper = createBoardCard("YOUR BOARD", playerScroll, ACCENT_BLUE);
             JPanel rightWrapper = createBoardCard("GHOST SOLVER (AI)", ghostScroll, ACCENT_PURPLE);
 
@@ -424,14 +437,10 @@ public class KaminoGUI extends JFrame {
         }
     }
 
-    // ==========================================================
-    // GHOST RUNNER LOGIC (RACE MODE)
-    // ==========================================================
     private void startGhostRunner() {
         ghostStepIndex = 1;
         updateRaceProgressText();
 
-        // Speed: faster on massive boards so it stays engaging
         int stepDelay = Math.max(250, 750 - (selectedSize * 5));
 
         ghostStepTimer = new javax.swing.Timer(stepDelay, e -> {
@@ -443,7 +452,6 @@ public class KaminoGUI extends JFrame {
                 ghostStepIndex++;
                 updateRaceProgressText();
 
-                // Ghost reaches target first -> Defeat!
                 if (ghostStepIndex == ghostOptimalPath.size()) {
                     stopGhostTimer();
                     handleGhostWon();
@@ -477,14 +485,16 @@ public class KaminoGUI extends JFrame {
             if (choice == JOptionPane.YES_OPTION) {
                 startNewGame(selectedSize);
             } else {
-                cardLayout.show(mainContainer, "HOME");
+                if (onReturnToHub != null) {
+                    dispose();
+                    onReturnToHub.run();
+                } else {
+                    cardLayout.show(mainContainer, "HOME");
+                }
             }
         });
     }
 
-    // ==========================================================
-    // AUDIO: FAMILY FEUD STRIKE BUZZER
-    // ==========================================================
     private void playErrorSound() {
         new Thread(() -> {
             try {
@@ -540,9 +550,6 @@ public class KaminoGUI extends JFrame {
         }).start();
     }
 
-    // ==========================================================
-    // MOVE VALIDATION
-    // ==========================================================
     private Integer getTileNumericValue(String[][] grid, int r, int c) {
         String token = grid[r][c].trim().toUpperCase();
         if (token.equals("S")) return null;
@@ -559,7 +566,6 @@ public class KaminoGUI extends JFrame {
         KaminoPuzzleSolver.Point currentHead = playerPath.get(playerPath.size() - 1);
         if (currentHead.equals(target)) return;
 
-        // Step back / undo
         if (playerPath.size() > 1 && playerPath.get(playerPath.size() - 2).equals(target)) {
             playerPath.remove(playerPath.size() - 1);
             playerBoardCanvas.repaint();
@@ -567,7 +573,6 @@ public class KaminoGUI extends JFrame {
             return;
         }
 
-        // Must be adjacent
         int dist = Math.abs(currentHead.row - target.row) + Math.abs(currentHead.col - target.col);
         if (dist != 1 || playerPath.contains(target)) {
             triggerIllegalMove(target);
@@ -595,7 +600,6 @@ public class KaminoGUI extends JFrame {
             playerBoardCanvas.repaint();
             updateRaceProgressText();
 
-            // Win condition reached!
             if (target.equals(playerEndPoint)) {
                 stopGhostTimer();
                 triggerVictoryWaterFlowAnimation();
@@ -621,21 +625,16 @@ public class KaminoGUI extends JFrame {
         flashTimer.start();
     }
 
-    // ==========================================================
-    // WATER FLOW ANIMATION & WIN DIALOG
-    // ==========================================================
     private void triggerVictoryWaterFlowAnimation() {
         isAnimatingFlow = true;
         statusLabel.setText("YOU REACHED THE GOAL! Verifying route...");
 
         final List<KaminoPuzzleSolver.Point> fullSolution = new ArrayList<>(playerPath);
 
-        // Step 1: Clear screen path
         playerPath.clear();
         animatedFlowPath.clear();
         playerBoardCanvas.repaint();
 
-        // Step 2: Flow tile-by-tile
         int delay = Math.max(35, Math.min(180, 2500 / fullSolution.size()));
 
         javax.swing.Timer flowTimer = new javax.swing.Timer(delay, null);
@@ -681,14 +680,16 @@ public class KaminoGUI extends JFrame {
             if (choice == JOptionPane.YES_OPTION) {
                 startNewGame(selectedSize);
             } else {
-                cardLayout.show(mainContainer, "HOME");
+                if (onReturnToHub != null) {
+                    dispose();
+                    onReturnToHub.run();
+                } else {
+                    cardLayout.show(mainContainer, "HOME");
+                }
             }
         });
     }
 
-    // ==========================================================
-    // REUSABLE CANVAS (PLAYER OR GHOST)
-    // ==========================================================
     private class BoardCanvas extends JPanel {
         private final boolean isGhost;
 
@@ -770,7 +771,6 @@ public class KaminoGUI extends JFrame {
             KaminoPuzzleSolver.Point ePoint = isGhost ? ghostEndPoint : playerEndPoint;
             int eVal = isGhost ? ghostEndValue : playerEndValue;
 
-            // 1. Draw tiles
             for (int r = 0; r < selectedSize; r++) {
                 for (int c = 0; c < selectedSize; c++) {
                     int x = startX + c * cellSize;
@@ -815,7 +815,6 @@ public class KaminoGUI extends JFrame {
                 }
             }
 
-            // 2. Draw path pipe line
             if (activePath.size() > 1) {
                 g2d.setColor(new Color(255, 255, 255, 220));
                 g2d.setStroke(new BasicStroke(Math.max(2, cellSize / 7), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
@@ -834,9 +833,6 @@ public class KaminoGUI extends JFrame {
         }
     }
 
-    // ==========================================================
-    // STYLED BUTTON UTILITY
-    // ==========================================================
     private JButton createStyledButton(String text, int width, int height, Color bgColor) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(width, height));

@@ -100,7 +100,7 @@ public class RectoTest {
             {0, 0, 0, 6, 0, 0, 0, 0}
         }, true);
 
-        int[][] generatedPuzzle = RectoGenerator.generate(8, 8);
+        int[][] generatedPuzzle = RectoGenerator.generateWithPartitions(8, 8).grid;
         runTestCase("AI Generated 8x8 Puzzle", generatedPuzzle, true);
 
         System.out.println("=========================================");
@@ -125,8 +125,7 @@ public class RectoTest {
         boolean actualSolvable = solver.solve();
 
         System.out.println("-----------------------------------------");
-        System.out.println("Case: " + testName + " -> " + solver.getDifficultyWithDimensions()
-                + " (Backtracks: " + solver.getBacktrackCount() + ")");
+        System.out.println("Case: " + testName + " -> Dimension: " + solver.getRows() + "x" + solver.getCols());
         System.out.println("-----------------------------------------");
 
         if (actualSolvable == expectedSolvable) {
@@ -157,6 +156,4 @@ public class RectoTest {
             System.out.println();
         }
     }
-
-    
 }
