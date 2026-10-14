@@ -1,0 +1,3 @@
+Sammy,8,7,SOLO
+HelloWorld,9,7,SOLO
+Bot2,11,7,SOLO

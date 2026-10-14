@@ -2,7 +2,6 @@ package Kamino_Puzzles;
 
 import PuzzleHub_Shared.Point;
 import PuzzleHub_Shared.UIUtils;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
@@ -113,9 +112,14 @@ public class KaminoGUI extends JFrame {
         gbc.insets = new Insets(10, 15, 10, 15);
         panel.add(raceBtn, gbc);
 
+        JButton highScoresBtn = UIUtils.createStyledButton("HIGH SCORES", 240, 48, new Color(211, 84, 0));
+        highScoresBtn.addActionListener(e -> showHighScoresDialog());
+        gbc.gridy = 4;
+        panel.add(highScoresBtn, gbc);
+
         JButton rulesBtn = UIUtils.createStyledButton("RULES", 240, 48, new Color(90, 100, 115));
         rulesBtn.addActionListener(e -> cardLayout.show(mainContainer, "RULES"));
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         panel.add(rulesBtn, gbc);
 
         if (onReturnToHub != null) {
@@ -124,11 +128,39 @@ public class KaminoGUI extends JFrame {
                 dispose();
                 onReturnToHub.run();
             });
-            gbc.gridy = 5;
+            gbc.gridy = 6;
             panel.add(hubBtn, gbc);
         }
 
         return panel;
+    }
+
+    private void showHighScoresDialog() {
+        List<HighScoreManager.ScoreEntry> scores = HighScoreManager.loadScores();
+
+        String[] columnNames = {"Rank", "Player", "Moves", "Grid Size", "Mode"};
+        Object[][] data = new Object[scores.size()][5];
+
+        for (int i = 0; i < scores.size(); i++) {
+            HighScoreManager.ScoreEntry entry = scores.get(i);
+            data[i][0] = i + 1;
+            data[i][1] = entry.name;
+            data[i][2] = entry.moves;
+            data[i][3] = entry.boardSize + "x" + entry.boardSize;
+            data[i][4] = entry.mode;
+        }
+
+        JTable table = new JTable(data, columnNames);
+        table.setFillsViewportHeight(true);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setPreferredSize(new Dimension(480, 320));
+
+        JOptionPane.showMessageDialog(
+                this,
+                scrollPane,
+                "Kamino High Scores",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private JPanel createRulesScreen() {
@@ -577,10 +609,22 @@ public class KaminoGUI extends JFrame {
 
     private void promptVictoryOptions() {
         SwingUtilities.invokeLater(() -> {
+            int finalMoves = animatedFlowPath.size() - 1;
+            String playerName = JOptionPane.showInputDialog(
+                    this,
+                    "Victory! You completed the " + selectedSize + "x" + selectedSize + " " + currentMode + " puzzle in " + finalMoves + " moves!\nEnter your name for the High Scores:",
+                    "Save High Score",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (playerName != null) {
+                HighScoreManager.addScore(playerName, finalMoves, selectedSize, currentMode.name());
+            }
+
             String title = (currentMode == GameMode.RACE) ? "You Beat the Solver!" : "Puzzle Solved!";
             String message = (currentMode == GameMode.RACE)
-                    ? "Victory! You beat the Ghost Solver in " + (animatedFlowPath.size() - 1) + " moves!"
-                    : "Congratulations! You solved the " + selectedSize + "x" + selectedSize + " puzzle in " + (animatedFlowPath.size() - 1) + " moves!";
+                    ? "Victory! You beat the Ghost Solver in " + finalMoves + " moves!"
+                    : "Congratulations! You solved the " + selectedSize + "x" + selectedSize + " puzzle in " + finalMoves + " moves!";
 
             String[] options = {"Play Again (Same Settings)", "Main Menu"};
             int choice = JOptionPane.showOptionDialog(
