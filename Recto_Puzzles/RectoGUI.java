@@ -1,3 +1,4 @@
+import Kamino_Puzzles.HighScoreManager;
 import PuzzleHub_Shared.UIUtils;
 
 import java.awt.*;
@@ -7,6 +8,8 @@ import java.util.Arrays;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
 
 public class RectoGUI extends JFrame {
 
@@ -99,16 +102,19 @@ public class RectoGUI extends JFrame {
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JButton startBtn = UIUtils.createStyledButton("Start Game", 240, 48, UIUtils.ACCENT_BLUE);
+        JButton highScoresBtn = UIUtils.createStyledButton("High Scores", 240, 48, new Color(211, 84, 0));
         JButton settingsBtn = UIUtils.createStyledButton("Settings", 240, 48, new Color(90, 100, 115));
         JButton quitBtn = onReturnToHub != null ? 
             UIUtils.createStyledButton("Back to Hub", 240, 40, new Color(70, 75, 85)) : 
             UIUtils.createStyledButton("Quit", 240, 40, new Color(178, 34, 34));
 
         startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        highScoresBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         settingsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         quitBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         startBtn.addActionListener(e -> cardLayout.show(mainPanel, "MODES"));
+        highScoresBtn.addActionListener(e -> showHighScoresDialog());
         settingsBtn.addActionListener(e -> cardLayout.show(mainPanel, "SETTINGS"));
         if (onReturnToHub != null) {
             quitBtn.addActionListener(e -> {
@@ -125,6 +131,8 @@ public class RectoGUI extends JFrame {
         centerPanel.add(Box.createRigidArea(new Dimension(0, 40)));
         centerPanel.add(startBtn);
         centerPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        centerPanel.add(highScoresBtn);
+        centerPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         centerPanel.add(settingsBtn);
         centerPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         centerPanel.add(quitBtn);
@@ -132,6 +140,88 @@ public class RectoGUI extends JFrame {
 
         panel.add(centerPanel, BorderLayout.CENTER);
         return panel;
+    }
+
+    private void showHighScoresDialog() {
+        JDialog dialog = new JDialog(this, "Recto High Scores", true);
+        dialog.setSize(580, 480);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel mainDialogPanel = new JPanel(new BorderLayout(0, 15));
+        mainDialogPanel.setBackground(UIUtils.BG_DARK);
+        mainDialogPanel.setBorder(new EmptyBorder(20, 25, 20, 25));
+
+        JLabel titleLabel = new JLabel("RECTO LEADERBOARD", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
+        titleLabel.setForeground(new Color(211, 84, 0));
+        mainDialogPanel.add(titleLabel, BorderLayout.NORTH);
+
+        List<HighScoreManager.ScoreEntry> scores = HighScoreManager.loadScores("RECTO");
+
+        String[] columnNames = {"Rank", "Player", "Time / Score", "Mode / Size"};
+        Object[][] data = new Object[scores.size()][4];
+
+        for (int i = 0; i < scores.size(); i++) {
+            HighScoreManager.ScoreEntry entry = scores.get(i);
+            data[i][0] = "#" + (i + 1);
+            data[i][1] = entry.name;
+            data[i][2] = entry.scoreValue + "s";
+            data[i][3] = entry.details;
+        }
+
+        JTable table = new JTable(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        table.setRowHeight(32);
+        table.setBackground(UIUtils.PANEL_BG);
+        table.setForeground(UIUtils.TEXT_LIGHT);
+        table.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        table.setSelectionBackground(new Color(70, 80, 95));
+        table.setSelectionForeground(Color.WHITE);
+        table.setGridColor(new Color(50, 56, 68));
+        table.setShowVerticalLines(false);
+
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(new Color(30, 34, 42));
+        header.setForeground(UIUtils.ACCENT_PURPLE);
+        header.setFont(new Font("SansSerif", Font.BOLD, 15));
+        header.setPreferredSize(new Dimension(0, 36));
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object val, boolean isSelected, boolean hasFocus, int r, int c) {
+                Component comp = super.getTableCellRendererComponent(tbl, val, isSelected, hasFocus, r, c);
+                setHorizontalAlignment(SwingConstants.CENTER);
+                if (!isSelected) {
+                    comp.setBackground(r % 2 == 0 ? UIUtils.PANEL_BG : new Color(38, 43, 52));
+                }
+                return comp;
+            }
+        };
+
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(UIUtils.PANEL_BG);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(50, 56, 68), 1));
+        mainDialogPanel.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bottomPanel.setOpaque(false);
+        JButton closeBtn = UIUtils.createStyledButton("Close", 140, 40, new Color(90, 100, 115));
+        closeBtn.addActionListener(e -> dialog.dispose());
+        bottomPanel.add(closeBtn);
+
+        mainDialogPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainDialogPanel);
+        dialog.setVisible(true);
     }
 
     private void showRulesDialog() {
@@ -635,6 +725,17 @@ public class RectoGUI extends JFrame {
         if (coveredCells == totalCells) {
             if (gameTimer != null) gameTimer.stop();
             playSound(true);
+
+            String playerName = JOptionPane.showInputDialog(
+                this,
+                "Victory! You solved the Recto puzzle in " + timerSeconds + " seconds!\nEnter your name for the High Scores:",
+                "Save High Score",
+                JOptionPane.PLAIN_MESSAGE
+            );
+
+            String boardInfo = grid.length + "x" + grid[0].length;
+            HighScoreManager.addScore(playerName, timerSeconds, selectedMode + " (" + boardInfo + ")", "RECTO");
+
             JOptionPane.showMessageDialog(this, "Congratulations! You solved the Recto puzzle!", "Victory", JOptionPane.INFORMATION_MESSAGE);
             cardLayout.show(mainPanel, "MODES");
         }
@@ -821,7 +922,7 @@ public class RectoGUI extends JFrame {
                         continue;
                     }
 
-                    g2.setColor(new Color(44, 49, 58)); // Kamino TILE_DEFAULT style
+                    g2.setColor(new Color(44, 49, 58));
                     g2.fillRect(x, y, cellSize, cellSize);
                     g2.setColor(new Color(20, 22, 26));
                     g2.drawRect(x, y, cellSize, cellSize);

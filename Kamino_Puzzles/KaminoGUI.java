@@ -8,6 +8,8 @@ import java.util.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
 
 public class KaminoGUI extends JFrame {
 
@@ -136,31 +138,85 @@ public class KaminoGUI extends JFrame {
     }
 
     private void showHighScoresDialog() {
-        List<HighScoreManager.ScoreEntry> scores = HighScoreManager.loadScores();
+        JDialog dialog = new JDialog(this, "High Scores - Leaderboard", true);
+        dialog.setSize(580, 480);
+        dialog.setLocationRelativeTo(this);
 
-        String[] columnNames = {"Rank", "Player", "Moves", "Grid Size", "Mode"};
-        Object[][] data = new Object[scores.size()][5];
+        JPanel mainDialogPanel = new JPanel(new BorderLayout(0, 15));
+        mainDialogPanel.setBackground(UIUtils.BG_DARK);
+        mainDialogPanel.setBorder(new EmptyBorder(20, 25, 20, 25));
+
+        JLabel titleLabel = new JLabel("KAMINO LEADERBOARD", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
+        titleLabel.setForeground(new Color(211, 84, 0));
+        mainDialogPanel.add(titleLabel, BorderLayout.NORTH);
+
+        List<HighScoreManager.ScoreEntry> scores = HighScoreManager.loadScores("KAMINO");
+
+        String[] columnNames = {"Rank", "Player", "Moves", "Grid Size / Mode"};
+        Object[][] data = new Object[scores.size()][4];
 
         for (int i = 0; i < scores.size(); i++) {
             HighScoreManager.ScoreEntry entry = scores.get(i);
-            data[i][0] = i + 1;
+            data[i][0] = "#" + (i + 1);
             data[i][1] = entry.name;
-            data[i][2] = entry.moves;
-            data[i][3] = entry.boardSize + "x" + entry.boardSize;
-            data[i][4] = entry.mode;
+            data[i][2] = entry.scoreValue;
+            data[i][3] = entry.details;
         }
 
-        JTable table = new JTable(data, columnNames);
-        table.setFillsViewportHeight(true);
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setPreferredSize(new Dimension(480, 320));
+        JTable table = new JTable(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
 
-        JOptionPane.showMessageDialog(
-                this,
-                scrollPane,
-                "Kamino High Scores",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        table.setRowHeight(32);
+        table.setBackground(UIUtils.PANEL_BG);
+        table.setForeground(UIUtils.TEXT_LIGHT);
+        table.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        table.setSelectionBackground(new Color(70, 80, 95));
+        table.setSelectionForeground(Color.WHITE);
+        table.setGridColor(new Color(50, 56, 68));
+        table.setShowVerticalLines(false);
+
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(new Color(30, 34, 42));
+        header.setForeground(UIUtils.ACCENT_BLUE);
+        header.setFont(new Font("SansSerif", Font.BOLD, 15));
+        header.setPreferredSize(new Dimension(0, 36));
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object val, boolean isSelected, boolean hasFocus, int r, int c) {
+                Component comp = super.getTableCellRendererComponent(tbl, val, isSelected, hasFocus, r, c);
+                setHorizontalAlignment(SwingConstants.CENTER);
+                if (!isSelected) {
+                    comp.setBackground(r % 2 == 0 ? UIUtils.PANEL_BG : new Color(38, 43, 52));
+                }
+                return comp;
+            }
+        };
+
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(UIUtils.PANEL_BG);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(50, 56, 68), 1));
+        mainDialogPanel.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bottomPanel.setOpaque(false);
+        JButton closeBtn = UIUtils.createStyledButton("Close", 140, 40, new Color(90, 100, 115));
+        closeBtn.addActionListener(e -> dialog.dispose());
+        bottomPanel.add(closeBtn);
+
+        mainDialogPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainDialogPanel);
+        dialog.setVisible(true);
     }
 
     private JPanel createRulesScreen() {
@@ -617,9 +673,7 @@ public class KaminoGUI extends JFrame {
                     JOptionPane.PLAIN_MESSAGE
             );
 
-            if (playerName != null) {
-                HighScoreManager.addScore(playerName, finalMoves, selectedSize, currentMode.name());
-            }
+            HighScoreManager.addScore(playerName, finalMoves, selectedSize + "x" + selectedSize + " (" + currentMode + ")", "KAMINO");
 
             String title = (currentMode == GameMode.RACE) ? "You Beat the Solver!" : "Puzzle Solved!";
             String message = (currentMode == GameMode.RACE)
